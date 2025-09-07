@@ -1,0 +1,162 @@
+POST http://localhost:4000/auth/signup
+Content-Type: application/json
+
+{
+  "name": "Alice Customer",
+  "email": "alice@example.com",
+  "phone": "1234567890",
+  "password": "mypassword",
+  "role": "customer"
+}
+
+###
+
+### Login
+POST http://localhost:4000/auth/login
+Content-Type: application/json
+
+{
+  "email": "alice@example.com",
+  "password": "mypassword"
+}
+
+###
+
+### Get Current User
+GET http://localhost:4000/auth/me
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6Niwicm9sZSI6ImN1c3RvbWVyIiwiaWF0IjoxNzU3MjU1NDQ1LCJleHAiOjE3NTcyNTYzNDV9.P8zNgjytcYoJP_kV2C2b5UuGuIujHuyyO_0B8R3HpsI
+
+###
+
+### Refresh Token
+POST http://localhost:4000/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "{{refreshToken}}"
+}
+
+###
+
+### Create Vehicle
+POST http://localhost:4000/vehicles/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6Niwicm9sZSI6ImN1c3RvbWVyIiwiaWF0IjoxNzU3MjU1NDQ1LCJleHAiOjE3NTcyNTYzNDV9.P8zNgjytcYoJP_kV2C2b5UuGuIujHuyyO_0B8R3HpsI
+Content-Type: application/json
+
+{
+  "make": "Volvo",
+  "model": "FH16",
+  "plate": "ABC123"
+}
+
+###
+
+### List Vehicles
+GET http://localhost:4000/vehicles
+Authorization: Bearer {{token}}
+
+###
+
+### Update Vehicle
+PATCH http://localhost:4000/vehicles/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "make": "Scania"
+}
+
+###
+
+### Delete Vehicle
+DELETE http://localhost:4000/vehicles/1
+Authorization: Bearer {{token}}
+
+###
+
+### Create Shipment
+POST http://localhost:4000/shipments
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "origin": "Berlin",
+  "destination": "Paris",
+  "weight": 1000
+}
+
+###
+
+### List My Shipments (Customer)
+GET http://localhost:4000/shipments/mine
+Authorization: Bearer {{token}}
+
+###
+
+### Cancel Shipment
+PATCH http://localhost:4000/shipments/1/cancel
+Authorization: Bearer {{token}}
+
+###
+
+### List Available Shipments (Trucker)
+GET http://localhost:4000/shipments/available
+Authorization: Bearer {{token}}
+
+###
+
+### Accept Shipment (Trucker)
+POST http://localhost:4000/shipments/1/accept
+Authorization: Bearer {{token}}
+
+###
+
+### Update Shipment Status (Trucker)
+POST http://localhost:4000/shipments/1/status
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "status": "in_transit"
+}
+
+###
+
+### List My Shipments (Trucker)
+GET http://localhost:4000/shipments/mine-trucker
+Authorization: Bearer {{token}}
+
+###
+
+### Create Review
+POST http://localhost:4000/reviews/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "rating": 5,
+  "comment": "Great service!"
+}
+
+###
+
+### List Users (Admin)
+GET http://localhost:4000/admin/users
+Authorization: Bearer {{adminToken}}
+
+###
+
+### Approve Trucker (Admin)
+PATCH http://localhost:4000/admin/users/1/approve
+Authorization: Bearer {{adminToken}}
+
+###
+
+### List All Shipments (Admin)
+GET http://localhost:4000/admin/shipments
+Authorization: Bearer {{adminToken}}
+
+###
+
+### Health Check
+GET http://localhost:4000/health

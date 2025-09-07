@@ -1,0 +1,26 @@
+HTTP/1.1 201 Created
+Content-Security-Policy: default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Resource-Policy: same-origin
+Origin-Agent-Cluster: ?1
+Referrer-Policy: no-referrer
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+X-Content-Type-Options: nosniff
+X-DNS-Prefetch-Control: off
+X-Download-Options: noopen
+X-Frame-Options: SAMEORIGIN
+X-Permitted-Cross-Domain-Policies: none
+X-XSS-Protection: 0
+Access-Control-Allow-Origin: http://localhost:5173
+Vary: Origin
+Access-Control-Allow-Credentials: true
+X-RateLimit-Limit: 120
+X-RateLimit-Remaining: 118
+Date: Sun, 07 Sep 2025 14:28:06 GMT
+X-RateLimit-Reset: 1757255299
+Content-Type: application/json; charset=utf-8
+Content-Length: 434
+ETag: W/"1b2-1HIIVHJj0JBXdGpsfegi/y6PWjQ"
+Connection: close
+
+{"user":{"id":6,"name":"Alice Customer","role":"customer","isApproved":true},"accessToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6Niwicm9sZSI6ImN1c3RvbWVyIiwiaWF0IjoxNzU3MjU1Mjg2LCJleHAiOjE3NTcyNTYxODZ9.c4nLNPCx6IN1xiqdxTLPbl0OYzDuMQdXu6CrGKD3QiE","refreshToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6Niwicm9sZSI6ImN1c3RvbWVyIiwiaWF0IjoxNzU3MjU1Mjg2LCJleHAiOjE3NTc4NjAwODZ9.N1WOw2Lkp4f7IL4wMIwbb1k7bdr6JWNviA3AW5wsdvc"}
