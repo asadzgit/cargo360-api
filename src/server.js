@@ -27,8 +27,45 @@ app.use('/shipments', shipmentsRoutes);
 app.use('/reviews', reviewsRoutes);
 app.use('/admin', adminRoutes);
 
-// Health
-app.get('/health', (_, res) => res.json({ ok: true }));
+// Health check endpoints
+app.get('/', (req, res) => {
+  res.json({
+    message: 'Cargo360 API is running successfully!',
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+    version: '1.0.0'
+  });
+});
+
+app.get('/health', async (req, res) => {
+  try {
+    const { sequelize } = require('../models');
+    
+    // Test database connection
+    await sequelize.authenticate();
+    
+    res.json({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'development',
+      database: 'connected',
+      uptime: process.uptime(),
+      memory: process.memoryUsage(),
+      version: '1.0.0'
+    });
+  } catch (error) {
+    res.status(503).json({
+      status: 'unhealthy',
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'development',
+      database: 'disconnected',
+      error: error.message,
+      uptime: process.uptime(),
+      version: '1.0.0'
+    });
+  }
+});
 
 // Global error handler
 app.use((err, req, res, _next) => {
