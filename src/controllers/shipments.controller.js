@@ -144,16 +144,28 @@ exports.updateStatus = async (req, res, next) => {
 };
 
 // READ - GET /shipments/mine-trucker (Trucker's shipments)
+// Also used for GET /shipments/mine-driver (Driver's shipments)
 exports.mineTrucker = async (req, res, next) => {
   try {
     const { status } = req.query;
     
-    const whereClause = { truckerId: req.user.id };
+    // Determine filter based on user role
+    const whereClause = {};
+    if (req.user.role === 'trucker') {
+      whereClause.truckerId = req.user.id;
+    } else if (req.user.role === 'driver') {
+      whereClause.driverId = req.user.id;
+    }
+    
     if (status) whereClause.status = status;
     
     const shipments = await Shipment.findAll({
       where: whereClause,
-      include: [{ model: User, as: 'Customer', attributes: ['id', 'name', 'phone'] }],
+      include: [
+        { model: User, as: 'Customer', attributes: ['id', 'name', 'phone'] },
+        { model: User, as: 'Trucker', attributes: ['id', 'name', 'phone'] },
+        { model: User, as: 'Driver', attributes: ['id', 'name', 'phone'] }
+      ],
       order: [['createdAt', 'DESC']]
     });
     
