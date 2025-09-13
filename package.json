@@ -6,13 +6,12 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
-    "build": "echo 'No build step required for Node.js'",
+    "build": "npm run db:migrate && npm run db:seed",
     "test": "echo 'No tests specified'",
     "sequelize": "sequelize",
     "db:migrate": "sequelize db:migrate",
     "db:seed": "sequelize db:seed:all",
     "db:undo": "sequelize db:migrate:undo:all",
-    "postinstall": "npm run db:migrate",
     "prestart": "echo 'Starting Cargo360 API...'",
     "deploy": "eb deploy"
   },
