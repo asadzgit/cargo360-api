@@ -15,7 +15,7 @@ const app = express();
 
 // Middlewares
 app.use(helmet());
-app.use(cors({ origin: corsOrigin, credentials: true }));
+app.use(cors({ origin: '*', credentials: true }));
 app.use(express.json({ limit: '1mb' }));
 app.use(morgan('dev'));
 app.use(rateLimit({ windowMs: 60 * 1000, max: 120 })); // 120 req/min/IP
@@ -34,7 +34,13 @@ app.get('/health', (_, res) => res.json({ ok: true }));
 app.use((err, req, res, _next) => {
   console.error(err);
   const status = err.status || 500;
-  res.status(status).json({ error: err.message || 'Internal Server Error' });
+  const code = err.code || 5002; // INTERNAL_ERROR
+  
+  res.status(status).json({
+    error: err.message || 'Internal Server Error',
+    code: code,
+    status: status
+  });
 });
 
 app.listen(port, () => console.log(`API running on http://localhost:${port}`));

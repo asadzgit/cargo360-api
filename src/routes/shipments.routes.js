@@ -3,17 +3,29 @@ const auth = require('../middlewares/auth');
 const requireRole = require('../middlewares/roles');
 const ctrl = require('../controllers/shipments.controller');
 
-// Customer
+// Admin routes (full CRUD access)
+router.get('/', auth, requireRole('admin'), ctrl.getAll);
+router.delete('/:id', auth, requireRole('admin'), ctrl.delete);
+
+// Customer routes
 router.post('/', auth, requireRole('customer'), ctrl.create);
 router.get('/mine', auth, requireRole('customer'), ctrl.mineCustomer);
+router.put('/:id', auth, requireRole('customer'), ctrl.update);
 router.patch('/:id/cancel', auth, requireRole('customer'), ctrl.cancelByCustomer);
 
-// Trucker
+// Trucker routes
 router.get('/available', auth, requireRole('trucker'), ctrl.availableForTruckers);
-router.post('/:id/accept', auth, requireRole('trucker'), ctrl.accept);
-router.post('/:id/status', auth, requireRole('trucker'), ctrl.updateStatus);
-
-// Trucker personal shipments
+router.post('/:id/accept', auth, requireRole('admin'), ctrl.accept);
+router.patch('/:id/status', auth, requireRole('admin'), ctrl.updateStatus);
 router.get('/mine-trucker', auth, requireRole('trucker'), ctrl.mineTrucker);
+
+// Driver routes (same as trucker for now)
+router.get('/available-driver', auth, requireRole('driver'), ctrl.availableForTruckers);
+router.post('/:id/accept-driver', auth, requireRole('driver'), ctrl.accept);
+router.patch('/:id/status-driver', auth, requireRole('driver'), ctrl.updateStatus);
+router.get('/mine-driver', auth, requireRole('driver'), ctrl.mineTrucker);
+
+// Shared routes (customer, trucker, driver, admin can view)
+router.get('/:id', auth, ctrl.getById);
 
 module.exports = router;

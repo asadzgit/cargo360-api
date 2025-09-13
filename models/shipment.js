@@ -9,21 +9,47 @@ module.exports = (sequelize, DataTypes) => {
       // Shipment belongs to a Trucker
       Shipment.belongsTo(models.User, { foreignKey: 'truckerId', as: 'Trucker' });
 
+      // Shipment belongs to a Driver
+      Shipment.belongsTo(models.User, { foreignKey: 'driverId', as: 'Driver' });
+
       // Shipment → Reviews
       Shipment.hasMany(models.Review, { foreignKey: 'shipmentId', as: 'Reviews' });
     }
   }
   Shipment.init({
-    customerId: DataTypes.INTEGER,
+    customerId: {
+      type: DataTypes.INTEGER,
+      allowNull: false
+    },
     truckerId: DataTypes.INTEGER,
-    pickupLocation: DataTypes.TEXT,
-    dropLocation: DataTypes.TEXT,
-    cargoType: DataTypes.STRING,
+    driverId: DataTypes.INTEGER,
+    pickupLocation: {
+      type: DataTypes.TEXT,
+      allowNull: false
+    },
+    dropLocation: {
+      type: DataTypes.TEXT,
+      allowNull: false
+    },
+    cargoType: {
+      type: DataTypes.STRING,
+      allowNull: false
+    },
+    description: {
+      type: DataTypes.TEXT,
+      allowNull: false
+    },
     cargoWeight: DataTypes.INTEGER,
     cargoSize: DataTypes.STRING,
-    vehicleType: DataTypes.STRING,
+    vehicleType: {
+      type: DataTypes.STRING,
+      allowNull: false
+    },
     budget: DataTypes.DECIMAL,
-    status: DataTypes.STRING
+    status: {
+      type: DataTypes.ENUM('pending','accepted','picked_up','in_transit','delivered','cancelled'),
+      defaultValue: 'pending'
+    }
   }, {
     sequelize,
     modelName: 'Shipment',

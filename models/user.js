@@ -22,8 +22,17 @@ module.exports = (sequelize, DataTypes) => {
     email: DataTypes.STRING,
     phone: DataTypes.STRING,
     passwordHash: DataTypes.STRING,
-    role: DataTypes.STRING, // ENUM handled in migration
-    isApproved: DataTypes.BOOLEAN
+    role: {
+      type: DataTypes.ENUM('customer', 'trucker', 'admin', 'driver'),
+      allowNull: false,
+      defaultValue: 'customer'
+    },
+    isApproved: DataTypes.BOOLEAN,
+    isEmailVerified: DataTypes.BOOLEAN,
+    emailVerificationToken: DataTypes.STRING,
+    emailVerificationExpires: DataTypes.DATE,
+    passwordResetToken: DataTypes.STRING,
+    passwordResetExpires: DataTypes.DATE
   }, {
     sequelize,
     modelName: 'User',

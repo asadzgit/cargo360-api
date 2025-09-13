@@ -1,0 +1,611 @@
+### Cargo360 API - Authentication Test Requests
+### Base URL
+@baseUrl = http://localhost:4000
+@contentType = application/json
+
+### 1. User Signup
+POST {{baseUrl}}/auth/signup
+Content-Type: {{contentType}}
+
+{
+  "name": "Cargo360 admin",
+  "email": "muhammad.asad@cargo360pk.com",
+  "password": "cargo36081@",
+  "role": "admin"
+}
+
+### 2. User Signup - Trucker
+POST {{baseUrl}}/auth/signup
+Content-Type: {{contentType}}
+
+{
+  "name": "Mike Trucker",
+  "email": "mike.trucker@example.com",
+  "phone": "9876543210",
+  "password": "password123",
+  "role": "trucker"
+}
+
+### 3. Login (Before Email Verification) - Should Fail
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "asadmahmood41999@gmail.com",
+  "password": "password123"
+}
+
+### 4. Resend Verification Email
+POST {{baseUrl}}/auth/resend-verification
+Content-Type: {{contentType}}
+
+{
+  "email": "john.doe@example.com"
+}
+
+### 5. Verify Email (Replace TOKEN with actual token from email)
+GET {{baseUrl}}/auth/verify-email?token=a01751291e1cd5eb79f636afd5752cecd6e3884eb265537ff4e53bac7e579fb7
+
+### 6. Login (After Email Verification) - Should Success
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "john.doe@example.com",
+  "password": "password123"
+}
+
+### 7. Get User Profile (Replace TOKEN with access token from login)
+GET {{baseUrl}}/auth/me
+Authorization: Bearer YOUR_ACCESS_TOKEN_HERE
+
+### 8. Refresh Token (Replace TOKEN with refresh token from login)
+POST {{baseUrl}}/auth/refresh
+Content-Type: {{contentType}}
+
+{
+  "refreshToken": "YOUR_REFRESH_TOKEN_HERE"
+}
+
+### 9. Forgot Password
+POST {{baseUrl}}/auth/forgot-password
+Content-Type: {{contentType}}
+
+{
+  "email": "john.doe@example.com"
+}
+
+### 10. Reset Password (Replace CODE with 6-digit code from email)
+POST {{baseUrl}}/auth/reset-password
+Content-Type: {{contentType}}
+
+{
+  "code": "123456",
+  "password": "newpassword123"
+}
+
+### 11. Login with New Password
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "john.doe@example.com",
+  "password": "newpassword123"
+}
+
+### ========================================
+### ERROR TESTING SCENARIOS
+### ========================================
+
+### 12. Signup with Invalid Email
+POST {{baseUrl}}/auth/signup
+Content-Type: {{contentType}}
+
+{
+  "name": "Test User",
+  "email": "invalid-email",
+  "phone": "1234567890",
+  "password": "password123",
+  "role": "customer"
+}
+
+### 13. Signup with Short Password
+POST {{baseUrl}}/auth/signup
+Content-Type: {{contentType}}
+
+{
+  "name": "Test User",
+  "email": "test@example.com",
+  "phone": "1234567890",
+  "password": "123",
+  "role": "customer"
+}
+
+### 14. Signup with Invalid Role
+POST {{baseUrl}}/auth/signup
+Content-Type: {{contentType}}
+
+{
+  "name": "Test User",
+  "email": "test2@example.com",
+  "phone": "1234567890",
+  "password": "password123",
+  "role": "invalid_role"
+}
+
+### 15. Login with Wrong Password
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "john.doe@example.com",
+  "password": "wrongpassword"
+}
+
+### 16. Login with Non-existent Email
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "nonexistent@example.com",
+  "password": "password123"
+}
+
+### 17. Verify Email with Invalid Token
+GET {{baseUrl}}/auth/verify-email?token=invalid_token_here
+
+### 18. Reset Password with Invalid Token
+POST {{baseUrl}}/auth/reset-password
+Content-Type: {{contentType}}
+
+{
+  "token": "invalid_token_here",
+  "password": "newpassword123"
+}
+
+### 19. Reset Password with Short Password
+POST {{baseUrl}}/auth/reset-password
+Content-Type: {{contentType}}
+
+{
+  "token": "YOUR_RESET_TOKEN_HERE",
+  "password": "123"
+}
+
+### 20. Resend Verification for Already Verified Email
+POST {{baseUrl}}/auth/resend-verification
+Content-Type: {{contentType}}
+
+{
+  "email": "john.doe@example.com"
+}
+
+### 21. Forgot Password for Non-existent Email
+POST {{baseUrl}}/auth/forgot-password
+Content-Type: {{contentType}}
+
+{
+  "email": "nonexistent@example.com"
+}
+
+### 22. Access Protected Route without Token
+GET {{baseUrl}}/auth/me
+
+### 23. Access Protected Route with Invalid Token
+GET {{baseUrl}}/auth/me
+Authorization: Bearer invalid_token_here
+
+### 24. Signup with Duplicate Phone Number
+POST {{baseUrl}}/auth/signup
+Content-Type: {{contentType}}
+
+{
+  "name": "Jane Doe",
+  "email": "jane.doe@example.com",
+  "phone": "1234567890",
+  "password": "password123",
+  "role": "customer"
+}
+
+### 25. Signup with Missing Name
+POST {{baseUrl}}/auth/signup
+Content-Type: {{contentType}}
+
+{
+  "email": "test.missing.name@example.com",
+  "phone": "9999999999",
+  "password": "password123",
+  "role": "customer"
+}
+
+### 26. Signup with Invalid Role (Database Level)
+POST {{baseUrl}}/auth/signup
+Content-Type: {{contentType}}
+
+{
+  "name": "Test User",
+  "email": "test.invalid.role@example.com",
+  "phone": "8888888888",
+  "password": "password123",
+  "role": "superadmin"
+}
+
+### 27. Signup without Phone Number (Should Success)
+POST {{baseUrl}}/auth/signup
+Content-Type: {{contentType}}
+
+{
+  "name": "No Phone User",
+  "email": "nophone.user@example.com",
+  "password": "password123",
+  "role": "customer"
+}
+
+### ========================================
+### TESTING WORKFLOW INSTRUCTIONS
+### ========================================
+
+# 1. Start your server: npm run dev
+# 2. Configure email settings in .env file
+# 3. Run requests in order:
+#    - First run signup (#1 or #2)
+#    - Check your email for verification link
+#    - Extract token from email and use in request #5
+#    - After verification, login should work (#6)
+#    - Use access token from login in request #7
+#    - Test forgot password flow (#9, then check email, then #10)
+# 4. Test error scenarios (#12-#23) to ensure proper validation
+# 5. Monitor server logs for email sending status
+
+### ========================================
+### NOTES
+### ========================================
+
+# - Replace YOUR_VERIFICATION_TOKEN_HERE with actual token from verification email
+# - Replace YOUR_ACCESS_TOKEN_HERE with actual access token from login response
+# - Replace YOUR_REFRESH_TOKEN_HERE with actual refresh token from login response
+# - Replace YOUR_RESET_TOKEN_HERE with actual token from password reset email
+# - Make sure your email configuration is set up in .env file
+# - Check server logs for email sending status and any errors
+
+### ========================================
+### ADMIN API ENDPOINTS TESTING
+### ========================================
+
+# Variables for testing
+@customerToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MTUsInJvbGUiOiJjdXN0b21lciIsImlhdCI6MTc1NzY4MTQ4NiwiZXhwIjoxNzU3NjgyMzg2fQ.NsjEMcLFaIlwuJdd5W0qJGPRre-ryWZCydrHzhika58
+@truckerToken = YOUR_TRUCKER_ACCESS_TOKEN_HERE
+@driverToken = YOUR_DRIVER_ACCESS_TOKEN_HERE
+@adminToken = YOUR_ADMIN_ACCESS_TOKEN_HERE
+@userId = 1
+
+### 28. List All Users (Admin Only)
+GET {{baseUrl}}/admin/users
+Authorization: Bearer {{adminToken}}
+
+### 29. Approve Trucker (Admin Only)
+PATCH {{baseUrl}}/admin/users/{{userId}}/approve
+Authorization: Bearer {{adminToken}}
+
+### 30. List All Shipments (Admin Only)
+GET {{baseUrl}}/admin/shipments
+Authorization: Bearer {{adminToken}}
+
+### 31. Assign Shipment to Trucker (Admin Only)
+PATCH {{baseUrl}}/admin/shipments/{{shipmentId}}/assign
+Content-Type: {{contentType}}
+Authorization: Bearer {{adminToken}}
+
+{
+  "assignment": "trucker",
+  "userId": 2
+}
+
+### 32. Assign Shipment to Driver (Admin Only)
+PATCH {{baseUrl}}/admin/shipments/{{shipmentId}}/assign
+Content-Type: {{contentType}}
+Authorization: Bearer {{adminToken}}
+
+{
+  "assignment": "driver",
+  "userId": 3
+}
+
+### 33. Assign Both Trucker and Driver (Sequential Assignments)
+# First assign trucker
+PATCH {{baseUrl}}/admin/shipments/{{shipmentId}}/assign
+Content-Type: {{contentType}}
+Authorization: Bearer {{adminToken}}
+
+{
+  "assignment": "trucker",
+  "userId": 2
+}
+
+### 34. Then assign driver to same shipment
+PATCH {{baseUrl}}/admin/shipments/{{shipmentId}}/assign
+Content-Type: {{contentType}}
+Authorization: Bearer {{adminToken}}
+
+{
+  "assignment": "driver",
+  "userId": 3
+}
+
+### ========================================
+### SHIPMENT API ENDPOINTS TESTING
+### ========================================
+
+@shipmentId = 1
+
+### ========================================
+### CUSTOMER SHIPMENT OPERATIONS
+### ========================================
+
+### 27. Create Shipment (Customer)
+POST {{baseUrl}}/shipments
+Content-Type: {{contentType}}
+Authorization: Bearer {{customerToken}}
+
+{
+  "pickupLocation": "123 Main Street, New York, NY 10001",
+  "dropLocation": "456 Oak Avenue, Los Angeles, CA 90210",
+  "cargoType": "Electronics",
+  "description": "Fragile electronic equipment including laptops and monitors. Requires careful handling and temperature control during transport.",
+  "vehicleType": "truck",
+  "cargoWeight": 500,
+  "cargoSize": "Large",
+  "budget": 1200.50
+}
+
+### 28. Create Shipment - Minimal Required Fields
+POST {{baseUrl}}/shipments
+Content-Type: {{contentType}}
+Authorization: Bearer {{customerToken}}
+
+{
+  "pickupLocation": "789 Pine Street, Chicago, IL 60601",
+  "dropLocation": "321 Elm Drive, Miami, FL 33101",
+  "cargoType": "Furniture",
+  "description": "Office furniture including desks, chairs, and filing cabinets. Standard handling required.",
+  "vehicleType": "van"
+}
+
+### 29. Get Customer's Shipments
+GET {{baseUrl}}/shipments/mine
+Authorization: Bearer {{customerToken}}
+
+### 30. Get Customer's Shipments - Filter by Status
+GET {{baseUrl}}/shipments/mine?status=pending
+Authorization: Bearer {{customerToken}}
+
+### 31. Get Single Shipment (Customer)
+GET {{baseUrl}}/shipments/{{shipmentId}}
+Authorization: Bearer {{customerToken}}
+
+### 32. Update Shipment (Customer - Only if Pending)
+PUT {{baseUrl}}/shipments/{{shipmentId}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{customerToken}}
+
+{
+  "pickupLocation": "Updated: 123 Main Street, New York, NY 10001",
+  "description": "Updated description: Fragile electronic equipment with special handling requirements.",
+  "budget": 1500.00
+}
+
+### 33. Cancel Shipment (Customer)
+PATCH {{baseUrl}}/shipments/{{shipmentId}}/cancel
+Authorization: Bearer {{customerToken}}
+
+### ========================================
+### TRUCKER SHIPMENT OPERATIONS
+### ========================================
+
+### 34. Get Available Shipments (Trucker)
+GET {{baseUrl}}/shipments/available
+Authorization: Bearer {{truckerToken}}
+
+### 35. Get Available Shipments - Filter by Vehicle Type
+GET {{baseUrl}}/shipments/available?vehicleType=truck
+Authorization: Bearer {{truckerToken}}
+
+### 36. Accept Shipment (Trucker)
+POST {{baseUrl}}/shipments/{{shipmentId}}/accept
+Authorization: Bearer {{truckerToken}}
+
+### 37. Update Shipment Status - Picked Up
+PATCH {{baseUrl}}/shipments/{{shipmentId}}/status
+Content-Type: {{contentType}}
+Authorization: Bearer {{truckerToken}}
+
+{
+  "status": "picked_up"
+}
+
+### 38. Update Shipment Status - In Transit
+PATCH {{baseUrl}}/shipments/{{shipmentId}}/status
+Content-Type: {{contentType}}
+Authorization: Bearer {{truckerToken}}
+
+{
+  "status": "in_transit"
+}
+
+### 39. Update Shipment Status - Delivered
+PATCH {{baseUrl}}/shipments/{{shipmentId}}/status
+Content-Type: {{contentType}}
+Authorization: Bearer {{truckerToken}}
+
+{
+  "status": "delivered"
+}
+
+### 40. Get Trucker's Shipments
+GET {{baseUrl}}/shipments/mine-trucker
+Authorization: Bearer {{truckerToken}}
+
+### 41. Get Trucker's Shipments - Filter by Status
+GET {{baseUrl}}/shipments/mine-trucker?status=accepted
+Authorization: Bearer {{truckerToken}}
+
+### ========================================
+### DRIVER SHIPMENT OPERATIONS
+### ========================================
+
+### 42. Get Available Shipments (Driver)
+GET {{baseUrl}}/shipments/available-driver
+Authorization: Bearer {{driverToken}}
+
+### 43. Accept Shipment (Driver)
+POST {{baseUrl}}/shipments/{{shipmentId}}/accept-driver
+Authorization: Bearer {{driverToken}}
+
+### 44. Update Shipment Status (Driver)
+PATCH {{baseUrl}}/shipments/{{shipmentId}}/status-driver
+Content-Type: {{contentType}}
+Authorization: Bearer {{driverToken}}
+
+{
+  "status": "picked_up"
+}
+
+### 45. Get Driver's Shipments
+GET {{baseUrl}}/shipments/mine-driver
+Authorization: Bearer {{driverToken}}
+
+### ========================================
+### ADMIN SHIPMENT OPERATIONS
+### ========================================
+
+### 46. Get All Shipments (Admin)
+GET {{baseUrl}}/shipments
+Authorization: Bearer {{adminToken}}
+
+### 47. Get All Shipments - Filter by Status
+GET {{baseUrl}}/shipments?status=pending
+Authorization: Bearer {{adminToken}}
+
+### 48. Get All Shipments - Filter by Vehicle Type
+GET {{baseUrl}}/shipments?vehicleType=truck
+Authorization: Bearer {{adminToken}}
+
+### 49. Delete Shipment (Admin - Soft Delete)
+DELETE {{baseUrl}}/shipments/{{shipmentId}}
+Authorization: Bearer {{adminToken}}
+
+### ========================================
+### SHIPMENT ERROR SCENARIOS
+### ========================================
+
+### 50. Create Shipment - Missing Required Fields
+POST {{baseUrl}}/shipments
+Content-Type: {{contentType}}
+Authorization: Bearer {{customerToken}}
+
+{
+  "pickupLocation": "123 Main Street",
+  "cargoType": "Electronics"
+}
+
+### 51. Create Shipment - Invalid Vehicle Type
+POST {{baseUrl}}/shipments
+Content-Type: {{contentType}}
+Authorization: Bearer {{customerToken}}
+
+{
+  "pickupLocation": "123 Main Street, New York, NY",
+  "dropLocation": "456 Oak Avenue, Los Angeles, CA",
+  "cargoType": "Electronics",
+  "description": "Test shipment",
+  "vehicleType": "invalid_vehicle"
+}
+
+### 52. Create Shipment - Description Too Short
+POST {{baseUrl}}/shipments
+Content-Type: {{contentType}}
+Authorization: Bearer {{customerToken}}
+
+{
+  "pickupLocation": "123 Main Street, New York, NY",
+  "dropLocation": "456 Oak Avenue, Los Angeles, CA",
+  "cargoType": "Electronics",
+  "description": "Short",
+  "vehicleType": "truck"
+}
+
+### 53. Accept Shipment - Already Accepted
+POST {{baseUrl}}/shipments/{{shipmentId}}/accept
+Authorization: Bearer {{truckerToken}}
+
+### 54. Update Shipment Status - Invalid Status
+PATCH {{baseUrl}}/shipments/{{shipmentId}}/status
+Content-Type: {{contentType}}
+Authorization: Bearer {{truckerToken}}
+
+{
+  "status": "invalid_status"
+}
+
+### 55. Update Shipment - Not Owner
+PUT {{baseUrl}}/shipments/{{shipmentId}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{truckerToken}}
+
+{
+  "description": "Trying to update as trucker"
+}
+
+### 56. Cancel Shipment - Already Accepted
+PATCH {{baseUrl}}/shipments/{{shipmentId}}/cancel
+Authorization: Bearer {{customerToken}}
+
+### 57. Access Shipment - Unauthorized
+GET {{baseUrl}}/shipments/{{shipmentId}}
+Authorization: Bearer {{truckerToken}}
+
+### 58. Create Shipment - Without Authentication
+POST {{baseUrl}}/shipments
+Content-Type: {{contentType}}
+
+{
+  "pickupLocation": "123 Main Street",
+  "dropLocation": "456 Oak Avenue",
+  "cargoType": "Electronics",
+  "description": "Test shipment without auth",
+  "vehicleType": "truck"
+}
+
+### 59. Trucker Access Customer Endpoint
+GET {{baseUrl}}/shipments/mine
+Authorization: Bearer {{truckerToken}}
+
+### 60. Customer Access Trucker Endpoint
+GET {{baseUrl}}/shipments/available
+Authorization: Bearer {{customerToken}}
+
+### ========================================
+### SHIPMENT TESTING WORKFLOW
+### ========================================
+
+# SETUP PHASE:
+# 1. Create users with different roles (customer, trucker, driver, admin)
+# 2. Verify emails and get access tokens for each role
+# 3. Replace token variables above with actual tokens
+
+# TESTING PHASE:
+# 1. Customer creates shipments (#27, #28)
+# 2. Customer views their shipments (#29, #30)
+# 3. Trucker views available shipments (#34, #35)
+# 4. Trucker accepts a shipment (#36)
+# 5. Trucker updates shipment status through delivery (#37-#39)
+# 6. Test driver operations (#42-#45)
+# 7. Test admin operations (#46-#49)
+# 8. Test all error scenarios (#50-#60)
+
+# NOTES:
+# - Update @shipmentId variable with actual shipment ID from responses
+# - Test role-based access control by trying operations with wrong roles
+# - Verify atomic shipment acceptance (multiple truckers trying to accept same shipment)
+# - Check that customers can only update pending shipments
+# - Verify proper authorization for viewing shipments
