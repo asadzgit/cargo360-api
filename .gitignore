@@ -148,3 +148,11 @@ Thumbs.db
 # Build directories
 build/
 dist/
+
+# REST API testing files
+*.rest
+
+# Documentation files (keep only essential ones)
+*.md
+!README.md
+!AWS_DEPLOYMENT_GUIDE.md
