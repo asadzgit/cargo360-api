@@ -6,13 +6,13 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
-    "build": "npm run db:migrate && npm run db:seed",
+    "build": "yarn run db:migrate && yarn run db:seed",
     "test": "echo 'No tests specified'",
     "console": "node console.js",
-    "sequelize": "npx sequelize",
-    "db:migrate": "npx sequelize db:migrate",
-    "db:seed": "npx sequelize db:seed:all",
-    "db:undo": "npx sequelize db:migrate:undo:all",
+    "sequelize": "sequelize-cli",
+    "db:migrate": "sequelize-cli db:migrate",
+    "db:seed": "sequelize-cli db:seed:all",
+    "db:undo": "sequelize-cli db:migrate:undo:all",
     "prestart": "echo 'Starting Cargo360 API...'",
     "deploy": "eb deploy"
   },
@@ -30,10 +30,10 @@
     "pg": "^8.16.3",
     "pg-hstore": "^2.3.4",
     "sequelize": "^6.37.7",
+    "sequelize-cli": "^6.6.3",
     "uuid": "^11.1.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.10",
-    "sequelize-cli": "^6.6.3"
+    "nodemon": "^3.1.10"
   }
 }
