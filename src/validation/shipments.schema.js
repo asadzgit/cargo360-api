@@ -6,7 +6,7 @@ exports.createShipmentSchema = Joi.object({
   dropLocation: Joi.string().min(5).max(500).required(),
   cargoType: Joi.string().min(2).max(100).required(),
   description: Joi.string().min(10).max(1000).required(),
-  vehicleType: Joi.string().valid('truck', 'van', 'pickup', 'trailer', 'container').required(),
+  vehicleType: Joi.string().required(),
   cargoWeight: Joi.number().integer().min(1).optional(),
   cargoSize: Joi.string().max(50).optional().allow('', null),
   budget: Joi.number().min(0).optional()
