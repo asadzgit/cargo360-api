@@ -14,6 +14,9 @@ module.exports = (sequelize, DataTypes) => {
 
       // Shipment → Reviews
       Shipment.hasMany(models.Review, { foreignKey: 'shipmentId', as: 'Reviews' });
+
+      // Shipment → Location Tracking
+      Shipment.hasMany(models.ShipmentLocation, { foreignKey: 'shipmentId', as: 'Locations' });
     }
   }
   Shipment.init({

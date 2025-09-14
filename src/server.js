@@ -10,6 +10,7 @@ const vehiclesRoutes = require('./routes/vehicles.routes');
 const shipmentsRoutes = require('./routes/shipments.routes');
 const reviewsRoutes = require('./routes/reviews.routes');
 const adminRoutes = require('./routes/admin.routes');
+const locationRoutes = require('./routes/location.routes');
 
 const app = express();
 
@@ -26,6 +27,7 @@ app.use('/vehicles', vehiclesRoutes);
 app.use('/shipments', shipmentsRoutes);
 app.use('/reviews', reviewsRoutes);
 app.use('/admin', adminRoutes);
+app.use('/location', locationRoutes);
 
 // Health check endpoints
 app.get('/', (req, res) => {

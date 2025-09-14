@@ -17,6 +17,6 @@ module.exports = {
     // }]);
   },
   async down(queryInterface) {
-    return queryInterface.bulkDelete('Users', { email: 'admin@demo.com' });
+    // return queryInterface.bulkDelete('Users', { email: 'admin@demo.com' });
   }
 };

@@ -1,4 +1,4 @@
-const { Shipment, User, sequelize } = require('../../models/index');
+const { Shipment, User, ShipmentLocation, sequelize } = require('../../models/index');
 const { 
   createShipmentSchema, 
   updateShipmentSchema, 
@@ -164,14 +164,44 @@ exports.mineTrucker = async (req, res, next) => {
       include: [
         { model: User, as: 'Customer', attributes: ['id', 'name', 'phone'] },
         { model: User, as: 'Trucker', attributes: ['id', 'name', 'phone'] },
-        { model: User, as: 'Driver', attributes: ['id', 'name', 'phone'] }
+        { model: User, as: 'Driver', attributes: ['id', 'name', 'phone'] },
+        { 
+          model: ShipmentLocation, 
+          as: 'Locations',
+          limit: 1,
+          order: [['timestamp', 'DESC']],
+          required: false,
+          attributes: ['id', 'latitude', 'longitude', 'accuracy', 'speed', 'heading', 'timestamp']
+        }
       ],
       order: [['createdAt', 'DESC']]
+    });
+
+    // Format response with current location
+    const formattedShipments = shipments.map(shipment => {
+      const shipmentData = shipment.toJSON();
+      const currentLocation = shipmentData.Locations && shipmentData.Locations.length > 0 
+        ? {
+            id: shipmentData.Locations[0].id,
+            latitude: parseFloat(shipmentData.Locations[0].latitude),
+            longitude: parseFloat(shipmentData.Locations[0].longitude),
+            accuracy: shipmentData.Locations[0].accuracy ? parseFloat(shipmentData.Locations[0].accuracy) : null,
+            speed: shipmentData.Locations[0].speed ? parseFloat(shipmentData.Locations[0].speed) : null,
+            heading: shipmentData.Locations[0].heading ? parseFloat(shipmentData.Locations[0].heading) : null,
+            timestamp: shipmentData.Locations[0].timestamp
+          }
+        : null;
+      
+      delete shipmentData.Locations;
+      return {
+        ...shipmentData,
+        currentLocation
+      };
     });
     
     res.json({ 
       success: true,
-      data: { shipments }
+      data: { shipments: formattedShipments }
     });
   } catch (e) { next(e); }
 };
