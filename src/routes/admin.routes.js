@@ -9,5 +9,6 @@ router.get('/users', ctrl.listUsers);
 router.patch('/users/:id/approve', ctrl.approveTrucker);
 router.get('/shipments', ctrl.listShipments);
 router.patch('/shipments/:id/assign', assignmentCtrl.assign);
+router.put('/shipments/:id', ctrl.updateShipment);
 
 module.exports = router;

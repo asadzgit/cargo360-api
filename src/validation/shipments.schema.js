@@ -5,7 +5,7 @@ exports.createShipmentSchema = Joi.object({
   pickupLocation: Joi.string().min(5).max(500).required(),
   dropLocation: Joi.string().min(5).max(500).required(),
   cargoType: Joi.string().min(2).max(100).required(),
-  description: Joi.string().min(10).max(1000).required(),
+  description: Joi.string().min(10).max(1000).optional().allow('', null),
   vehicleType: Joi.string().required(),
   cargoWeight: Joi.number().integer().min(1).optional(),
   cargoSize: Joi.string().max(50).optional().allow('', null),
@@ -17,8 +17,8 @@ exports.updateShipmentSchema = Joi.object({
   pickupLocation: Joi.string().min(5).max(500).optional(),
   dropLocation: Joi.string().min(5).max(500).optional(),
   cargoType: Joi.string().min(2).max(100).optional(),
-  description: Joi.string().min(10).max(1000).optional(),
-  vehicleType: Joi.string().valid('truck', 'van', 'pickup', 'trailer', 'container').optional(),
+  description: Joi.string().min(10).max(1000).optional().allow('', null),
+  vehicleType: Joi.string().optional(),
   cargoWeight: Joi.number().integer().min(1).optional(),
   cargoSize: Joi.string().max(50).optional().allow('', null),
   budget: Joi.number().min(0).optional()
@@ -38,5 +38,5 @@ exports.assignmentSchema = Joi.object({
 // Query parameters validation
 exports.queryShipmentsSchema = Joi.object({
   status: Joi.string().valid('pending', 'accepted', 'picked_up', 'in_transit', 'delivered', 'cancelled').optional(),
-  vehicleType: Joi.string().valid('truck', 'van', 'pickup', 'trailer', 'container').optional()
+  vehicleType: Joi.string().optional()
 });
