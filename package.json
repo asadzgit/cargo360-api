@@ -6,12 +6,11 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
-    "build": "yarn run db:migrate && yarn run db:seed",
+    "build": "yarn run db:migrate",
     "test": "echo 'No tests specified'",
     "console": "node console.js",
     "sequelize": "sequelize-cli",
     "db:migrate": "sequelize-cli db:migrate",
-    "db:seed": "sequelize-cli db:seed:all",
     "db:undo": "sequelize-cli db:migrate:undo:all",
     "prestart": "echo 'Starting Cargo360 API...'",
     "deploy": "eb deploy"
