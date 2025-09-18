@@ -6,9 +6,8 @@ const ctrl = require('../controllers/admin.controller');
 const assignmentCtrl = require('../controllers/assignment.controller');
 
 // Routes accessible by both admin and moderator
-router.use(auth);
-router.get('/users', requireRole('admin'), ctrl.listUsers);
-router.get('/shipments', requireRole('admin'), ctrl.listShipments);
+router.get('/users', auth, requireRole('admin'), ctrl.listUsers);
+router.get('/shipments', auth, requireRole('admin'), ctrl.listShipments);
 
 // Routes accessible only by admin (not moderator)
 router.patch('/users/:id/approve', auth, adminOnly, ctrl.approveTrucker);
