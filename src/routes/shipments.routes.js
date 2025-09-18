@@ -1,11 +1,12 @@
 const router = require('express').Router();
 const auth = require('../middlewares/auth');
 const requireRole = require('../middlewares/roles');
+const adminOnly = require('../middlewares/adminOnly');
 const ctrl = require('../controllers/shipments.controller');
 
-// Admin routes (full CRUD access)
+// Admin routes (moderator can view, only admin can delete)
 router.get('/', auth, requireRole('admin'), ctrl.getAll);
-router.delete('/:id', auth, requireRole('admin'), ctrl.delete);
+router.delete('/:id', auth, adminOnly, ctrl.delete);
 
 // Customer routes
 router.post('/', auth, requireRole('customer'), ctrl.create);

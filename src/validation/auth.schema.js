@@ -6,7 +6,7 @@ exports.signupSchema = Joi.object({
   email: Joi.string().email().required(),
   phone: Joi.string().min(6).optional(),
   password: Joi.string().min(6).required(),
-  role: Joi.string().valid('customer','trucker','admin','driver').required()
+  role: Joi.string().valid('customer','trucker','admin','driver','moderator').required()
 });
 
 exports.loginSchema = Joi.object({
