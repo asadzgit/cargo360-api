@@ -1,7 +1,6 @@
 const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
-const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 
 const { port, corsOrigin } = require('../config/env');
@@ -18,7 +17,105 @@ const app = express();
 app.use(helmet());
 app.use(cors({ origin: '*', credentials: true }));
 app.use(express.json({ limit: '1mb' }));
-app.use(morgan('dev'));
+// --- Detailed request/response logger with redaction ---
+const SENSITIVE_KEYS = new Set([
+  'password',
+  'passwordHash',
+  'token',
+  'accessToken',
+  'refreshToken',
+  'emailVerificationToken',
+  'passwordResetToken',
+  'authorization',
+  'Authorization'
+]);
+function sanitize(value, depth = 0) {
+  const MAX_DEPTH = 4;
+  const MAX_ARRAY_ITEMS = 50;
+  if (value == null) return value;
+  if (depth > MAX_DEPTH) return '[Truncated]';
+  if (typeof value === 'string') return value.length > 1000 ? value.slice(0, 1000) + '…' : value;
+  if (typeof value !== 'object') return value;
+
+  if (Array.isArray(value)) {
+    const limited = value.slice(0, MAX_ARRAY_ITEMS).map(v => sanitize(v, depth + 1));
+    if (value.length > MAX_ARRAY_ITEMS) limited.push('…');
+    return limited;
+  }
+
+  const out = {};
+  for (const [k, v] of Object.entries(value)) {
+    if (SENSITIVE_KEYS.has(k)) {
+      out[k] = '[REDACTED]';
+    } else {
+      out[k] = sanitize(v, depth + 1);
+    }
+  }
+  return out;
+}
+app.use((req, res, next) => {
+  const start = process.hrtime.bigint();
+
+  // Capture response body by monkey-patching res.json and res.send
+  const originalJson = res.json.bind(res);
+  const originalSend = res.send.bind(res);
+  res.locals.responseBody = undefined;
+
+  res.json = (body) => {
+    res.locals.responseBody = body;
+    return originalJson(body);
+  };
+  res.send = (body) => {
+    // Avoid double-stringifying buffers
+    try { res.locals.responseBody = body; } catch (_) {}
+    return originalSend(body);
+  };
+  res.on('finish', () => {
+    const end = process.hrtime.bigint();
+    const durationMs = Number(end - start) / 1e6;
+
+    // Build a compact, sanitized log line
+    const payload = {
+      method: req.method,
+      url: req.originalUrl || req.url,
+      status: res.statusCode,
+      durationMs: Math.round(durationMs),
+      ip: req.ip,
+      user: req.user ? { id: req.user.id, role: req.user.role } : undefined,
+      params: sanitize(req.params),
+      query: sanitize(req.query),
+      body: sanitize(req.body),
+    };
+
+    // Serialize and truncate response body for safety
+    let responsePreview;
+    try {
+      if (typeof res.locals.responseBody === 'object') {
+        responsePreview = JSON.stringify(sanitize(res.locals.responseBody));
+      } else if (typeof res.locals.responseBody === 'string') {
+        responsePreview = res.locals.responseBody;
+      } else if (res.locals.responseBody !== undefined) {
+        responsePreview = String(res.locals.responseBody);
+      }
+    } catch (_) {
+      responsePreview = '[Unserializable Response]';
+    }
+    if (responsePreview && responsePreview.length > 5000) {
+      responsePreview = responsePreview.slice(0, 5000) + '…';
+    }
+
+    // Final log output
+    const logObj = { ...payload, response: responsePreview };
+    if (res.statusCode >= 500) {
+      console.error('[HTTP]', logObj);
+    } else if (res.statusCode >= 400) {
+      console.warn('[HTTP]', logObj);
+    } else {
+      console.log('[HTTP]', logObj);
+    }
+  });
+  next();
+});
 app.use(rateLimit({ windowMs: 60 * 1000, max: 120 })); // 120 req/min/IP
 
 // Routes
@@ -71,7 +168,21 @@ app.get('/health', async (req, res) => {
 
 // Global error handler
 app.use((err, req, res, _next) => {
-  console.error(err);
+  // Log enriched error with request context
+  const ctx = {
+    method: req.method,
+    url: req.originalUrl || req.url,
+    ip: req.ip,
+    user: req.user ? { id: req.user.id, role: req.user.role } : undefined,
+    params: sanitize(req.params),
+    query: sanitize(req.query),
+    body: sanitize(req.body),
+    message: err.message,
+    stack: process.env.NODE_ENV === 'production' ? undefined : err.stack,
+    status: err.status || 500,
+    code: err.code || 5002
+  };
+  console.error('[ERROR]', ctx);
   const status = err.status || 500;
   const code = err.code || 5002; // INTERNAL_ERROR
   
