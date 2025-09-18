@@ -13,6 +13,6 @@ module.exports = {
     // Note: PostgreSQL doesn't support removing enum values directly
     // You would need to recreate the enum type without 'moderator'
     // For now, we'll leave this empty as it's complex to reverse
-    console.log('Cannot easily remove enum value in PostgreSQL. Manual intervention required.');
+    console.log('Cannot easily  remove enum value in PostgreSQL. Manual intervention required.');
   }
 };
