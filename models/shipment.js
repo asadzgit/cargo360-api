@@ -17,6 +17,9 @@ module.exports = (sequelize, DataTypes) => {
 
       // Shipment → Location Tracking
       Shipment.hasMany(models.ShipmentLocation, { foreignKey: 'shipmentId', as: 'Locations' });
+
+      // Shipment → DiscountRequest (one-to-one)
+      Shipment.hasOne(models.DiscountRequest, { foreignKey: 'shipmentId', as: 'DiscountRequest' });
     }
   }
   Shipment.init({
