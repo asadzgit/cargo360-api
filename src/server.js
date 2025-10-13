@@ -1,6 +1,7 @@
 const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
+// const morgan = require('morgan'); // Replaced by custom request/response logger below
 const rateLimit = require('express-rate-limit');
 
 const { port, corsOrigin } = require('../config/env');
@@ -10,6 +11,7 @@ const shipmentsRoutes = require('./routes/shipments.routes');
 const reviewsRoutes = require('./routes/reviews.routes');
 const adminRoutes = require('./routes/admin.routes');
 const locationRoutes = require('./routes/location.routes');
+const discountRequestsRoutes = require('./routes/discountRequests.routes');
 
 const app = express();
 
@@ -125,6 +127,7 @@ app.use('/shipments', shipmentsRoutes);
 app.use('/reviews', reviewsRoutes);
 app.use('/admin', adminRoutes);
 app.use('/location', locationRoutes);
+app.use('/discount-requests', discountRequestsRoutes);
 
 // Health check endpoints
 app.get('/', (req, res) => {

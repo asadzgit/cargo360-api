@@ -1,4 +1,4 @@
-const { Shipment, User, ShipmentLocation, sequelize } = require('../../models/index');
+const { Shipment, User, ShipmentLocation, DiscountRequest, sequelize } = require('../../models/index');
 const { 
   createShipmentSchema, 
   updateShipmentSchema, 
@@ -43,7 +43,10 @@ exports.mineCustomer = async (req, res, next) => {
     
     const shipments = await Shipment.findAll({
       where: whereClause,
-      include: [{ model: User, as: 'Trucker', attributes: ['id', 'name', 'phone'] }],
+      include: [
+        { model: User, as: 'Trucker', attributes: ['id', 'name', 'phone'] },
+        { model: DiscountRequest, as: 'DiscountRequest', attributes: ['id','requestAmount','status'] }
+      ],  
       order: [['createdAt', 'DESC']]
     });
     
@@ -64,7 +67,10 @@ exports.availableForTruckers = async (req, res, next) => {
     
     const shipments = await Shipment.findAll({
       where: whereClause,
-      include: [{ model: User, as: 'Customer', attributes: ['id', 'name', 'phone'] }],
+      include: [
+        { model: User, as: 'Customer', attributes: ['id', 'name', 'phone'] },
+        { model: DiscountRequest, as: 'DiscountRequest', attributes: ['id','requestAmount','status'] }
+      ],
       order: [['createdAt', 'DESC']]
     });
     
@@ -100,7 +106,8 @@ exports.accept = async (req, res, next) => {
     const updated = await Shipment.findByPk(shipmentId, {
       include: [
         { model: User, as: 'Customer', attributes: ['id', 'name', 'phone'] },
-        { model: User, as: 'Trucker', attributes: ['id', 'name', 'phone'] }
+        { model: User, as: 'Trucker', attributes: ['id', 'name', 'phone'] },
+        { model: DiscountRequest, as: 'DiscountRequest', attributes: ['id','requestAmount','status'] },
       ]
     });
     
@@ -131,7 +138,8 @@ exports.updateStatus = async (req, res, next) => {
     const updated = await Shipment.findByPk(shipment.id, {
       include: [
         { model: User, as: 'Customer', attributes: ['id', 'name', 'phone'] },
-        { model: User, as: 'Trucker', attributes: ['id', 'name', 'phone'] }
+        { model: User, as: 'Trucker', attributes: ['id', 'name', 'phone'] },
+        { model: DiscountRequest, as: 'DiscountRequest', attributes: ['id','requestAmount','status'] },
       ]
     });
     
@@ -165,6 +173,7 @@ exports.mineTrucker = async (req, res, next) => {
         { model: User, as: 'Customer', attributes: ['id', 'name', 'phone'] },
         { model: User, as: 'Trucker', attributes: ['id', 'name', 'phone'] },
         { model: User, as: 'Driver', attributes: ['id', 'name', 'phone'] },
+        { model: DiscountRequest, as: 'DiscountRequest', attributes: ['id','requestAmount','status'] },
         { 
           model: ShipmentLocation, 
           as: 'Locations',
@@ -237,7 +246,8 @@ exports.getById = async (req, res, next) => {
     const shipment = await Shipment.findByPk(req.params.id, {
       include: [
         { model: User, as: 'Customer', attributes: ['id', 'name', 'phone'] },
-        { model: User, as: 'Trucker', attributes: ['id', 'name', 'phone'] }
+        { model: User, as: 'Trucker', attributes: ['id', 'name', 'phone'] },
+        { model: DiscountRequest, as: 'DiscountRequest', attributes: ['id','requestAmount','status'] },
       ]
     });
     
@@ -278,7 +288,10 @@ exports.update = async (req, res, next) => {
     await shipment.update(data);
     
     const updated = await Shipment.findByPk(shipment.id, {
-      include: [{ model: User, as: 'Customer', attributes: ['id', 'name', 'phone'] }]
+      include: [
+        { model: User, as: 'Customer', attributes: ['id', 'name', 'phone'] },
+        { model: DiscountRequest, as: 'DiscountRequest', attributes: ['id','requestAmount','status'] },
+      ]
     });
     
     res.json({ 
@@ -321,7 +334,8 @@ exports.getAll = async (req, res, next) => {
       include: [
         { model: User, as: 'Customer', attributes: ['id', 'name', 'phone'] },
         { model: User, as: 'Trucker', attributes: ['id', 'name', 'phone'] },
-        { model: User, as: 'Driver', attributes: ['id', 'name', 'phone'] }
+        { model: User, as: 'Driver', attributes: ['id', 'name', 'phone'] },
+        { model: DiscountRequest, as: 'DiscountRequest', attributes: ['id','requestAmount','status'] },
       ],
       order: [['createdAt', 'DESC']]
     });
