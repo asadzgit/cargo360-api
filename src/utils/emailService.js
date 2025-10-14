@@ -23,7 +23,7 @@ const generateToken = () => {
 const sendVerificationEmail = async (user, token) => {
   const transporter = createTransporter();
   
-  const verificationUrl = `${process.env.CLIENT_URL || 'http://localhost:4000'}/auth/verify-email?token=${token}`;
+  const verificationUrl = `${process.env.SERVER_URL || 'http://localhost:4000'}/auth/verify-email?token=${token}`;
   
   const mailOptions = {
     from: process.env.EMAIL_FROM || process.env.EMAIL_USER,

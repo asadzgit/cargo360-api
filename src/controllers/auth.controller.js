@@ -146,7 +146,10 @@ exports.refresh = async (req, res, next) => {
 exports.verifyEmail = async (req, res, next) => {
   try {
     const { token } = req.query;
-    if (!token) return next(createError('Verification token is required', ERROR_CODES.MISSING_FIELD, 400));
+    if (!token) {
+      const clientUrl = process.env.CLIENT_URL || 'http://localhost:4000';
+      return res.redirect(302, `${clientUrl}/verification-failure`);
+    }
 
     const user = await User.findOne({
       where: {
@@ -156,7 +159,8 @@ exports.verifyEmail = async (req, res, next) => {
     });
 
     if (!user) {
-      return next(createError('Invalid or expired verification token. Please request a new verification email.', ERROR_CODES.INVALID_TOKEN, 400));
+      const clientUrl = process.env.CLIENT_URL || 'http://localhost:4000';
+      return res.redirect(302, `${clientUrl}/verification-failure`);
     }
 
     // Update user as verified
@@ -166,22 +170,19 @@ exports.verifyEmail = async (req, res, next) => {
       emailVerificationExpires: null
     });
 
-    // Generate tokens for the user
-    const tokens = signTokens(user);
-    
-    res.json({
-      message: 'Email verified successfully',
-      user: { id: user.id, name: user.name, role: user.role, isApproved: user.isApproved, isEmailVerified: true },
-      ...tokens
-    });
+    // Redirect to client success page instead of returning JSON
+    const clientUrl = process.env.CLIENT_URL || 'http://localhost:4000';
+    return res.redirect(302, `${clientUrl}/verification-success`);
   } catch (e) { 
-    if (e.isJoi) {
-      return next(handleJoiError(e));
-    }
-    if (e.name && e.name.startsWith('Sequelize')) {
-      return next(handleSequelizeError(e));
-    }
-    next(e); 
+      try {
+        const clientUrl = process.env.CLIENT_URL || 'http://localhost:4000';
+        return res.redirect(302, `${clientUrl}/verification-failure`);
+      } catch (_) {
+        // Fallback to default error handling if redirect fails
+        if (e.isJoi) return next(handleJoiError(e));
+        if (e.name && e.name.startsWith('Sequelize')) return next(handleSequelizeError(e));
+        next(e);
+      }
   }
 };
 
