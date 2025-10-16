@@ -12,6 +12,7 @@ const reviewsRoutes = require('./routes/reviews.routes');
 const adminRoutes = require('./routes/admin.routes');
 const locationRoutes = require('./routes/location.routes');
 const discountRequestsRoutes = require('./routes/discountRequests.routes');
+const usersRoutes = require('./routes/users.routes');
 
 const app = express();
 
@@ -128,6 +129,7 @@ app.use('/reviews', reviewsRoutes);
 app.use('/admin', adminRoutes);
 app.use('/location', locationRoutes);
 app.use('/discount-requests', discountRequestsRoutes);
+app.use('/users', usersRoutes);
 
 // Health check endpoints
 app.get('/', (req, res) => {
