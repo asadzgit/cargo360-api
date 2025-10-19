@@ -45,3 +45,26 @@ exports.updateMe = async (req, res, next) => {
     next(e);
   }
 };
+
+// DELETE /users/me
+exports.deleteMe = async (req, res, next) => {
+  try {
+    const password = req.query.password || req.body?.password;
+    if (!password) {
+      return next(Object.assign(new Error('Password is required'), { status: 400 }));
+    }
+
+    const user = await User.findByPk(req.user.id);
+    if (!user) return next(Object.assign(new Error('User not found'), { status: 404 }));
+
+    const ok = await bcrypt.compare(password, user.passwordHash || '');
+    if (!ok) return next(Object.assign(new Error('Password is incorrect'), { status: 400 }));
+
+    await user.destroy();
+
+    // Optionally, you can clear auth info client-side; JWTs are stateless
+    res.status(200).json({ success: true, message: 'Account deleted successfully' });
+  } catch (e) {
+    next(e);
+  }
+};

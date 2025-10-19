@@ -15,4 +15,9 @@ router.post('/resend-verification', resendVerification);
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password', resetPassword);
 
+// Account deletion link flow
+router.post('/deletion-link', auth, getDeletionLink);      // authenticated
+router.post('/deletion/validate', validateDeletion);       // no auth
+router.post('/deletion/confirm', confirmDeletion);         // no auth
+
 module.exports = router;

@@ -307,3 +307,78 @@ exports.resetPassword = async (req, res, next) => {
     next(e); 
   }
 };
+
+// --- Deletion link flow (token -> cookie -> delete) ---
+// In-memory single-use JTI tracker (per-process)
+const usedDeletionJtis = new Map(); // jti -> expiry timestamp (ms)
+function markJtiUsed(jti, ttlMs) { usedDeletionJtis.set(jti, Date.now() + ttlMs); }
+function isJtiUsed(jti) {
+  const exp = usedDeletionJtis.get(jti);
+  if (!exp) return false;
+  if (Date.now() > exp) { usedDeletionJtis.delete(jti); return false; }
+  return true;
+}
+setInterval(() => {
+  const now = Date.now();
+  for (const [jti, exp] of usedDeletionJtis.entries()) if (now > exp) usedDeletionJtis.delete(jti);
+}, 60_000).unref?.();
+
+// POST /auth/deletion-link (auth required)
+exports.getDeletionLink = async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return next(createError('Unauthorized', ERROR_CODES.UNAUTHORIZED, 401));
+    const crypto = require('crypto');
+    const jti = (crypto.randomUUID?.() || crypto.randomBytes(16).toString('hex'));
+    const ttlSec = 10 * 60; // 10 minutes
+    const token = jwt.sign({ sub: String(userId), scope: 'delete_account', jti }, jwtCfg.accessSecret, { expiresIn: ttlSec });
+    const frontendBase = process.env.CLIENT_DELETE_BASE_URL || 'https://cargo360pk.com/delete-account';
+    const url = `${frontendBase}#token=${token}`;
+    res.json({ token, url, expiresIn: ttlSec });
+  } catch (e) { next(e); }
+};
+
+// POST /auth/deletion/validate  Body: { token }
+exports.validateDeletion = async (req, res, next) => {
+  try {
+    const { token } = req.body || {};
+    if (!token) return next(createError('Token is required', ERROR_CODES.MISSING_FIELD, 400));
+    let payload;
+    try { payload = jwt.verify(token, jwtCfg.accessSecret); }
+    catch { return next(createError('Invalid or expired token', ERROR_CODES.INVALID_TOKEN, 401)); }
+    if (payload.scope !== 'delete_account' || !payload.sub || !payload.jti) return next(createError('Invalid token', ERROR_CODES.INVALID_TOKEN, 401));
+    if (isJtiUsed(payload.jti)) return next(createError('Token already used', ERROR_CODES.INVALID_TOKEN, 401));
+    const remainingMs = payload.exp * 1000 - Date.now();
+    if (remainingMs <= 0) return next(createError('Token expired', ERROR_CODES.TOKEN_EXPIRED, 401));
+    markJtiUsed(payload.jti, remainingMs);
+
+    const delSessTtlSec = Math.min(Math.floor(remainingMs / 1000), 10 * 60);
+    const delSess = jwt.sign({ sub: String(payload.sub), scope: 'deletion_session' }, jwtCfg.accessSecret, { expiresIn: delSessTtlSec });
+    const secure = process.env.NODE_ENV === 'production';
+    res.cookie('del_sess', delSess, { httpOnly: true, secure, sameSite: 'lax', maxAge: delSessTtlSec * 1000, path: '/' });
+    res.status(204).send();
+  } catch (e) { next(e); }
+};
+
+// POST /auth/deletion/confirm  Cookie: del_sess  Body: { password }
+exports.confirmDeletion = async (req, res, next) => {
+  try {
+    const password = req.body?.password;
+    
+    if (!delSess) return next(createError('Session expired. Please retry account deletion.', ERROR_CODES.UNAUTHORIZED, 401));
+    let sess;
+    try { sess = jwt.verify(delSess, jwtCfg.accessSecret); }
+    catch { return next(createError('Session expired. Please retry account deletion.', ERROR_CODES.TOKEN_EXPIRED, 401)); }
+    if (sess.scope !== 'deletion_session' || !sess.sub) return next(createError('Invalid session', ERROR_CODES.UNAUTHORIZED, 401));
+
+    const user = await User.findByPk(sess.sub);
+    if (!user) return next(createError('User not found', ERROR_CODES.USER_NOT_FOUND, 404));
+    const ok = await bcrypt.compare(password, user.passwordHash || '');
+    if (!ok) return next(createError('Password is incorrect', ERROR_CODES.INVALID_CREDENTIALS, 401));
+
+    await user.destroy();
+    const secure = process.env.NODE_ENV === 'production';
+    res.clearCookie('del_sess', { httpOnly: true, secure, sameSite: 'lax', path: '/' });
+    res.json({ success: true, message: 'Account deleted successfully' });
+  } catch (e) { next(e); }
+};
