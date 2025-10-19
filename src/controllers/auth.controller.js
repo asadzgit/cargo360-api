@@ -365,6 +365,7 @@ exports.confirmDeletion = async (req, res, next) => {
   try {
     const password = req.body?.password;
     
+    const delSess = req.cookies?.del_sess;
     if (!delSess) return next(createError('Session expired. Please retry account deletion.', ERROR_CODES.UNAUTHORIZED, 401));
     let sess;
     try { sess = jwt.verify(delSess, jwtCfg.accessSecret); }
