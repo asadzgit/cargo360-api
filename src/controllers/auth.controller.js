@@ -364,28 +364,51 @@ exports.validateDeletion = async (req, res, next) => {
   } catch (e) { next(e); }
 };
 
-// POST /auth/deletion/confirm  Cookie: del_sess  Body: { password }
+// POST /auth/deletion/confirm  Body: { password, token? } or Authorization: Bearer <token>
 exports.confirmDeletion = async (req, res, next) => {
   try {
     const password = req.body?.password;
-    
-    const delSess = req.cookies?.del_sess;
-    if (!delSess) return next(createError('Session expired. Please retry account deletion.', ERROR_CODES.UNAUTHORIZED, 401));
-    let sess;
-    try { sess = jwt.verify(delSess, jwtCfg.accessSecret); }
-    catch { return next(createError('Session expired. Please retry account deletion.', ERROR_CODES.TOKEN_EXPIRED, 401)); }
-    if (sess.scope !== 'deletion_session' || !sess.sub) return next(createError('Invalid session', ERROR_CODES.UNAUTHORIZED, 401));
+    if (!password) {
+      return next(createError('Password is required', ERROR_CODES.MISSING_FIELD, 400));
+    }
 
-    const user = await User.findByPk(sess.sub);
+    // Read the one-time deletion token directly from body or Authorization header
+    const bodyToken = req.body?.token;
+    const authHeader = req.headers.authorization || '';
+    const bearer = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : undefined;
+    const rawToken = bodyToken || bearer;
+    if (!rawToken) {
+      return next(createError('Deletion token is required', ERROR_CODES.MISSING_FIELD, 400));
+    }
+
+    // Verify and enforce scope + single-use (JTI)
+    let payload;
+    try { payload = jwt.verify(rawToken, jwtCfg.accessSecret); }
+    catch { return next(createError('Invalid or expired token', ERROR_CODES.INVALID_TOKEN, 401)); }
+
+    if (!payload.sub || payload.scope !== 'delete_account' || !payload.jti) {
+      return next(createError('Invalid token', ERROR_CODES.INVALID_TOKEN, 401));
+    }
+
+    // Single-use check
+    if (isJtiUsed(payload.jti)) {
+      return next(createError('Token already used', ERROR_CODES.INVALID_TOKEN, 401));
+    }
+    const remainingMs = (payload.exp * 1000) - Date.now();
+    if (remainingMs <= 0) {
+      return next(createError('Token expired', ERROR_CODES.TOKEN_EXPIRED, 401));
+    }
+    markJtiUsed(payload.jti, remainingMs);
+
+    // Verify password and delete
+    const user = await User.findByPk(payload.sub);
     if (!user) return next(createError('User not found', ERROR_CODES.USER_NOT_FOUND, 404));
+
     const ok = await bcrypt.compare(password, user.passwordHash || '');
     if (!ok) return next(createError('Password is incorrect', ERROR_CODES.INVALID_CREDENTIALS, 401));
 
     await user.destroy();
-    const sameSite = process.env.CROSS_SITE_COOKIE === '1' ? 'none' : 'lax';
-    const secure = sameSite === 'none' ? true : process.env.NODE_ENV === 'production';
-    
-    res.clearCookie('del_sess', { httpOnly: true, secure, sameSite, path: '/' });
+
     res.json({ success: true, message: 'Account deleted successfully' });
   } catch (e) { next(e); }
 };
