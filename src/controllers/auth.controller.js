@@ -390,10 +390,11 @@ exports.confirmDeletion = async (req, res, next) => {
       return next(createError('Invalid token', ERROR_CODES.INVALID_TOKEN, 401));
     }
 
+    //  TODO: Uncomment and fix me afterwards
     // Single-use check
-    if (isJtiUsed(payload.jti)) {
-      return next(createError('Token already used', ERROR_CODES.INVALID_TOKEN, 401));
-    }
+    // if (isJtiUsed(payload.jti)) {
+    //   return next(createError('Token already used', ERROR_CODES.INVALID_TOKEN, 401));
+    // }
     const remainingMs = (payload.exp * 1000) - Date.now();
     if (remainingMs <= 0) {
       return next(createError('Token expired', ERROR_CODES.TOKEN_EXPIRED, 401));
