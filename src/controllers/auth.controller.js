@@ -342,6 +342,8 @@ exports.getDeletionLink = async (req, res, next) => {
 exports.validateDeletion = async (req, res, next) => {
   try {
     const { token } = req.body || {};
+    const secure = process.env.NODE_ENV === 'production';
+    const sameSite = process.env.CROSS_SITE_COOKIE === '1' ? 'none' : 'lax';
     if (!token) return next(createError('Token is required', ERROR_CODES.MISSING_FIELD, 400));
     let payload;
     try { payload = jwt.verify(token, jwtCfg.accessSecret); }
@@ -354,8 +356,10 @@ exports.validateDeletion = async (req, res, next) => {
 
     const delSessTtlSec = Math.min(Math.floor(remainingMs / 1000), 10 * 60);
     const delSess = jwt.sign({ sub: String(payload.sub), scope: 'deletion_session' }, jwtCfg.accessSecret, { expiresIn: delSessTtlSec });
-    const secure = process.env.NODE_ENV === 'production';
-    res.cookie('del_sess', delSess, { httpOnly: true, secure, sameSite: 'lax', maxAge: delSessTtlSec * 1000, path: '/' });
+    res.cookie('del_sess', delSess,
+       { httpOnly: true,
+          secure: sameSite === 'none' ? true : secure,
+         sameSite: 'lax', maxAge: delSessTtlSec * 1000, path: '/' });
     res.status(204).send();
   } catch (e) { next(e); }
 };
@@ -378,8 +382,10 @@ exports.confirmDeletion = async (req, res, next) => {
     if (!ok) return next(createError('Password is incorrect', ERROR_CODES.INVALID_CREDENTIALS, 401));
 
     await user.destroy();
-    const secure = process.env.NODE_ENV === 'production';
-    res.clearCookie('del_sess', { httpOnly: true, secure, sameSite: 'lax', path: '/' });
+    const sameSite = process.env.CROSS_SITE_COOKIE === '1' ? 'none' : 'lax';
+    const secure = sameSite === 'none' ? true : process.env.NODE_ENV === 'production';
+    
+    res.clearCookie('del_sess', { httpOnly: true, secure, sameSite, path: '/' });
     res.json({ success: true, message: 'Account deleted successfully' });
   } catch (e) { next(e); }
 };
