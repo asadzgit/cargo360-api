@@ -20,7 +20,7 @@ const app = express();
 // Middlewares
 app.use(helmet());
 app.use(cookieParser());
-app.use(cors({ origin: ['http://localhost:5173','https://cargo360pk.com'], credentials: true }));
+app.use(cors({ origin: ['https://admin.cargo360pk.com', 'http://localhost:3000', 'http://localhost:5173','https://cargo360pk.com'], credentials: true }));
 app.use(express.json({ limit: '1mb' }));
 // --- Detailed request/response logger with redaction ---
 const SENSITIVE_KEYS = new Set([
