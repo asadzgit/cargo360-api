@@ -1,7 +1,9 @@
 const bcrypt = require('bcryptjs');
+const axios = require('axios');
 const jwt = require('jsonwebtoken');
 const { Op } = require('sequelize');
-const { signupSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema } = require('../validation/auth.schema');
+const { signupSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema, phoneCheckSchema, phoneSignupSchema, verifyOtpSchema, setPinSchema, phoneLoginSchema, resendOtpSchema } = require('../validation/auth.schema');
+
 const { jwt: jwtCfg } = require('../../config/env');
 const { User } = require('../../models/index');
 const { generateToken, sendVerificationEmail, sendPasswordResetEmail } = require('../utils/emailService');
@@ -412,4 +414,170 @@ exports.confirmDeletion = async (req, res, next) => {
 
     res.json({ success: true, message: 'Account deleted successfully' });
   } catch (e) { next(e); }
+};
+
+// ---------------- Phone-based OTP/PIN flow ----------------
+function genOtp() { return Math.floor(100000 + Math.random() * 900000).toString(); }
+
+async function sendOtpSms(phone, code) {
+  const url = 'https://secure.h3techs.com/sms/api/send';
+  const data = {
+    email: 'asadmahmood41999@gmail.com',
+    key: '104c92c66802b374db7787ecfd4e27ec09',
+    mask: 'CARGO360',
+    to: phone,
+    message: `Cargo360 verification code: ${code}. Expires in 5 minutes. Do not share this code with anyone.`
+  };
+  const response = await axios.post(url, data);
+  if (response.status !== 200) {
+    throw new Error(`Failed to send OTP SMS: ${response.statusText}`);
+  }
+}
+// POST /auth/phone/check
+exports.phoneCheck = async (req, res, next) => {
+  try {
+    const data = await phoneCheckSchema.validateAsync(req.body, { stripUnknown: true });
+    const { phone } = data;
+    const user = await User.findOne({ where: { phone } });
+
+    if (!user) {
+      return res.json({ exists: false, nextStep: 'signup_required' });
+    }
+
+    if (!(user.role === 'trucker' || user.role === 'driver')) {
+      return next(createError('Phone belongs to another account type', ERROR_CODES.UNAUTHORIZED, 403));
+    }
+
+    if (!user.isPhoneVerified) {
+      const code = genOtp();
+      const exp = new Date(Date.now() + 10 * 60 * 1000);
+      await user.update({ otpCode: code, otpExpires: exp });
+      await sendOtpSms(user.phone, code);
+      return res.json({
+        exists: true,
+        userId: user.id,
+        isPhoneVerified: false,
+        hasPin: !!user.passwordHash,
+        nextStep: 'verify_otp',
+        message: 'OTP sent'
+      });
+    }
+
+    const hasPin = !!user.passwordHash;
+    return res.json({
+      exists: true,
+      userId: user.id,
+      isPhoneVerified: true,
+      hasPin,
+      nextStep: hasPin ? 'enter_pin' : 'set_pin'
+    });
+  } catch (e) {
+    if (e.isJoi) return next(handleJoiError(e));
+    next(e);
+  }
+};
+
+// POST /auth/phone/signup
+exports.phoneSignup = async (req, res, next) => {
+  try {
+    const data = await phoneSignupSchema.validateAsync(req.body, { stripUnknown: true });
+    const { name, phone, role } = data;
+
+    if (!(role === 'trucker' || role === 'driver')) {
+      return next(createError('Invalid role', ERROR_CODES.INVALID_ROLE, 400));
+    }
+
+    const exists = await User.findOne({ where: { phone } });
+    if (exists) return next(createError('An account with this phone number already exists', ERROR_CODES.PHONE_ALREADY_EXISTS, 409));
+
+    const code = genOtp();
+    const exp = new Date(Date.now() + 10 * 60 * 1000);
+    const user = await User.create({
+      name,
+      phone,
+      role,
+      isApproved: role === 'trucker' ? false : true,
+      isEmailVerified: false,
+      isPhoneVerified: false,
+      otpCode: code,
+      otpExpires: exp
+    });
+
+    await sendOtpSms(phone, code);
+    res.status(201).json({ userId: user.id, nextStep: 'verify_otp', message: 'OTP sent' });
+  } catch (e) {
+    if (e.isJoi) return next(handleJoiError(e));
+    if (e.name && e.name.startsWith('Sequelize')) return next(handleSequelizeError(e));
+    next(e);
+  }
+};
+
+// POST /auth/phone/verify-otp
+exports.verifyOtp = async (req, res, next) => {
+  try {
+    const { phone, otp } = await verifyOtpSchema.validateAsync(req.body, { stripUnknown: true });
+    const user = await User.findOne({ where: { phone } });
+    if (!user) return next(createError('User not found', ERROR_CODES.USER_NOT_FOUND, 404));
+    if (!user.otpCode || !user.otpExpires || new Date(user.otpExpires) < new Date()) {
+      return next(createError('Invalid or expired OTP', ERROR_CODES.INVALID_TOKEN, 400));
+    }
+    if (user.otpCode !== otp) {
+      return next(createError('Invalid or expired OTP', ERROR_CODES.INVALID_TOKEN, 400));
+    }
+    await user.update({ isPhoneVerified: true, otpCode: null, otpExpires: null });
+    res.json({ success: true, nextStep: user.passwordHash ? 'enter_pin' : 'set_pin' });
+  } catch (e) {
+    if (e.isJoi) return next(handleJoiError(e));
+    next(e);
+  }
+};
+
+// POST /auth/phone/set-pin
+exports.setPin = async (req, res, next) => {
+  try {
+    const { phone, pin } = await setPinSchema.validateAsync(req.body, { stripUnknown: true });
+    const user = await User.findOne({ where: { phone } });
+    if (!user) return next(createError('User not found', ERROR_CODES.USER_NOT_FOUND, 404));
+    if (!user.isPhoneVerified) return next(createError('Phone not verified', ERROR_CODES.UNAUTHORIZED, 403));
+    const hash = await bcrypt.hash(pin, 10);
+    await user.update({ passwordHash: hash });
+    res.json({ success: true, nextStep: 'enter_pin' });
+  } catch (e) {
+    if (e.isJoi) return next(handleJoiError(e));
+    next(e);
+  }
+};
+
+// POST /auth/phone/login
+exports.phoneLogin = async (req, res, next) => {
+  try {
+    const { phone, pin } = await phoneLoginSchema.validateAsync(req.body, { stripUnknown: true });
+    const user = await User.findOne({ where: { phone } });
+    if (!user) return next(createError('Invalid phone or PIN', ERROR_CODES.INVALID_CREDENTIALS, 401));
+    if (!user.isPhoneVerified) return next(createError('Please verify your phone number first', ERROR_CODES.UNAUTHORIZED, 403));
+    const ok = await bcrypt.compare(pin, user.passwordHash || '');
+    if (!ok) return next(createError('Invalid phone or PIN', ERROR_CODES.INVALID_CREDENTIALS, 401));
+    const tokens = signTokens(user);
+    res.json({ user: { id: user.id, name: user.name, role: user.role, isApproved: user.isApproved, isPhoneVerified: user.isPhoneVerified }, ...tokens });
+  } catch (e) {
+    if (e.isJoi) return next(handleJoiError(e));
+    next(e);
+  }
+};
+
+// POST /auth/phone/resend-otp
+exports.resendOtp = async (req, res, next) => {
+  try {
+    const { phone } = await resendOtpSchema.validateAsync(req.body, { stripUnknown: true });
+    const user = await User.findOne({ where: { phone } });
+    if (!user) return next(createError('User not found', ERROR_CODES.USER_NOT_FOUND, 404));
+    const code = genOtp();
+    const exp = new Date(Date.now() + 10 * 60 * 1000);
+    await user.update({ otpCode: code, otpExpires: exp });
+    await sendOtpSms(phone, code);
+    res.json({ success: true, message: 'OTP resent' });
+  } catch (e) {
+    if (e.isJoi) return next(handleJoiError(e));
+    next(e);
+  }
 };

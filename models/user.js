@@ -15,13 +15,17 @@ module.exports = (sequelize, DataTypes) => {
       // 📝 User → Reviews (as reviewer and reviewee)
       User.hasMany(models.Review, { foreignKey: 'reviewerId', as: 'ReviewsGiven' });
       User.hasMany(models.Review, { foreignKey: 'revieweeId', as: 'ReviewsReceived' });
+
+      // 👤 Broker-driver hierarchy
+      User.belongsTo(models.User, { as: 'Broker', foreignKey: 'brokerId' });
+      User.hasMany(models.User, { as: 'Drivers', foreignKey: 'brokerId' });
     }
   }
   User.init({
     name: DataTypes.STRING,
     email: DataTypes.STRING,
-    phone: DataTypes.STRING,
-    passwordHash: DataTypes.STRING,
+    phone: DataTypes.STRING, // should be UNIQUE at DB level
+    passwordHash: DataTypes.STRING, // stores 6-digit PIN hash for phone logins
     role: {
       type: DataTypes.ENUM('customer', 'trucker', 'admin', 'driver', 'moderator'),
       allowNull: false,
@@ -32,7 +36,16 @@ module.exports = (sequelize, DataTypes) => {
     emailVerificationToken: DataTypes.STRING,
     emailVerificationExpires: DataTypes.DATE,
     passwordResetToken: DataTypes.STRING,
-    passwordResetExpires: DataTypes.DATE
+    passwordResetExpires: DataTypes.DATE,
+    // 📱 Phone-OTP flow
+    otpCode: DataTypes.STRING,          // 6-digit code
+    otpExpires: DataTypes.DATE,
+    isPhoneVerified: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false
+    },
+    // 🔗 Broker linkage for drivers
+    brokerId: DataTypes.INTEGER
   }, {
     sequelize,
     modelName: 'User',

@@ -3,9 +3,21 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    // First, add the new enum value to the existing enum type
+    // First, add the new enum value to the existing enum type, only if it does not already exist
     await queryInterface.sequelize.query(`
-      ALTER TYPE "enum_Users_role" ADD VALUE 'moderator';
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1
+          FROM pg_type t
+          JOIN pg_enum e ON t.oid = e.enumtypid
+          WHERE t.typname = 'enum_Users_role'
+            AND e.enumlabel = 'moderator'
+        ) THEN
+          ALTER TYPE "enum_Users_role" ADD VALUE 'moderator';
+        END IF;
+      END
+      $$;
     `);
   },
 

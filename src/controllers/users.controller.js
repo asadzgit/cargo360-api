@@ -68,3 +68,40 @@ exports.deleteMe = async (req, res, next) => {
     next(e);
   }
 };
+
+// POST /users/drivers (broker-only)
+exports.addDriver = async (req, res, next) => {
+  try {
+    const { name, phone } = req.body || {};
+    if (!name || !phone) return next(Object.assign(new Error('Name and phone are required'), { status: 400 }));
+
+    // Ensure caller is trucker/broker (role middleware also enforces)
+    if (req.user?.role !== 'trucker' && req.user?.role !== 'admin') {
+      return next(Object.assign(new Error('Forbidden'), { status: 403 }));
+    }
+
+    // Check if phone exists
+    const existing = await require('../../models').User.findOne({ where: { phone } });
+    if (existing) return next(Object.assign(new Error('An account with this phone number already exists'), { status: 409 }));
+
+    // Create driver linked to broker
+    const { User } = require('../../models');
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const exp = new Date(Date.now() + 10 * 60 * 1000);
+    const driver = await User.create({
+      name,
+      phone,
+      role: 'driver',
+      brokerId: req.user.id,
+      isApproved: true,
+      isPhoneVerified: false,
+      otpCode: code,
+      otpExpires: exp
+    });
+
+    console.log(`[SMS] OTP to ${phone}: ${code}`);
+    res.status(201).json({ driverId: driver.id, nextStep: 'verify_otp', message: 'OTP sent to driver' });
+  } catch (e) {
+    next(e);
+  }
+};
