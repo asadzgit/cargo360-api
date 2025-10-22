@@ -143,7 +143,7 @@ const handleSequelizeError = (sequelizeError) => {
   }
   
   // Default database error
-  return createError('Database operation failed', ERROR_CODES.DATABASE_ERROR, 500);
+  return createError(`Database operation failed ${sequelizeError.message}`, ERROR_CODES.DATABASE_ERROR, 500);
 };
 
 // Format error response for client
