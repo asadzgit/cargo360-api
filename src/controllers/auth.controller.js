@@ -421,16 +421,26 @@ function genOtp() { return Math.floor(100000 + Math.random() * 900000).toString(
 
 async function sendOtpSms(phone, code) {
   const url = 'https://secure.h3techs.com/sms/api/send';
-  const data = {
+  const payload = {
     email: 'asadmahmood41999@gmail.com',
     key: '104c92c66802b374db7787ecfd4e27ec09',
     mask: 'CARGO360',
     to: phone,
     message: `Cargo360 verification code: ${code}. Expires in 5 minutes. Do not share this code with anyone.`
   };
-  const response = await axios.post(url, data);
-  if (response.status !== 200) {
-    throw new Error(`Failed to send OTP SMS: ${response.statusText}`);
+  try {
+    const response = await axios.post(url, payload, { timeout: 15000 });
+    const smsResponse = response.data.sms;
+    console.log('[OTP] Response', smsResponse);
+    if (smsResponse.code !== '000' || smsResponse.response !== 'Message Queued Successfully') {
+      throw new Error(`OTP SMS failed: ${smsResponse.code} ${smsResponse.response}`);
+    }
+  } catch (err) {
+    // Log server-provided details if present
+    const status = err.response?.status;
+    const data = err.response?.data;
+    console.error('[OTP] Error', { status, data, message: err.message });
+    throw err;
   }
 }
 // POST /auth/phone/check
