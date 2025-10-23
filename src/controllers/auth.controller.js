@@ -429,6 +429,8 @@ async function sendOtpSms(phone, code) {
     message: `Cargo360 verification code: ${code}. Expires in 5 minutes. Do not share this code with anyone.`
   };
   try {
+    console.log('[OTP] Payload', payload);
+    console.log('[OTP] URL', url);
     const response = await axios.post(url, payload, { timeout: 15000 });
     const smsResponse = response.data.sms;
     console.log('[OTP] Response', smsResponse);
