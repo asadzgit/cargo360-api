@@ -483,6 +483,8 @@ async function sendOtpSms(phone, code) {
     // Provider usually returns JSON with { sms: { code: '000', response: 'Message Queued Successfully', ... } }
     try {
       const parsed = JSON.parse(stdout);
+      console.log(`parsed response: ${parsed}`);
+      
       const sms = parsed.sms || parsed;
       if (!(sms.code === '000' && /Queued/i.test(sms.response))) {
         throw new Error(`OTP SMS failed: ${sms.code} ${sms.response}`);
