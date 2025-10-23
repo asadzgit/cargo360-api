@@ -25,7 +25,10 @@ module.exports = (sequelize, DataTypes) => {
     name: DataTypes.STRING,
     email: DataTypes.STRING,
     phone: DataTypes.STRING, // should be UNIQUE at DB level
-    passwordHash: DataTypes.STRING, // stores 6-digit PIN hash for phone logins
+    passwordHash: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },// stores 6-digit PIN hash for phone logins
     role: {
       type: DataTypes.ENUM('customer', 'trucker', 'admin', 'driver', 'moderator'),
       allowNull: false,
