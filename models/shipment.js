@@ -47,6 +47,10 @@ module.exports = (sequelize, DataTypes) => {
     },
     cargoWeight: DataTypes.INTEGER,
     cargoSize: DataTypes.STRING,
+    numberOfVehicles: {
+      type: DataTypes.INTEGER,
+      allowNull: true
+    },
     vehicleType: {
       type: DataTypes.STRING,
       allowNull: false
