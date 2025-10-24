@@ -9,7 +9,9 @@ exports.createShipmentSchema = Joi.object({
   vehicleType: Joi.string().required(),
   cargoWeight: Joi.number().integer().min(1).optional(),
   cargoSize: Joi.string().max(50).optional().allow('', null),
-  budget: Joi.number().min(0).optional()
+  budget: Joi.number().min(0).optional(),
+  insurance: Joi.boolean().optional(),
+  salesTax: Joi.boolean().optional()
 });
 
 // Update shipment validation (for customers)
@@ -21,7 +23,9 @@ exports.updateShipmentSchema = Joi.object({
   vehicleType: Joi.string().optional(),
   cargoWeight: Joi.number().integer().min(1).optional(),
   cargoSize: Joi.string().max(50).optional().allow('', null),
-  budget: Joi.number().min(0).optional()
+  budget: Joi.number().min(0).optional(),
+  insurance: Joi.boolean().optional(),
+  salesTax: Joi.boolean().optional()
 });
 
 // Status update validation (for truckers)

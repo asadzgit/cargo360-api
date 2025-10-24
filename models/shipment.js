@@ -52,6 +52,16 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false
     },
     budget: DataTypes.DECIMAL,
+    insurance: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false
+    },
+    salesTax: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false
+    },
     status: {
       type: DataTypes.ENUM('pending','accepted','picked_up','in_transit','delivered','cancelled'),
       defaultValue: 'pending'
