@@ -11,8 +11,14 @@ const { Op } = require('sequelize');
 // CREATE - POST /shipments
 exports.create = async (req, res, next) => {
   try {
+    console.log("***********************");
+    
+    console.log("req.body", req.body);
+    
     const data = await createShipmentSchema.validateAsync(req.body, { stripUnknown: true });
     
+    console.log("data", data);
+    console.log("***********************");
     const shipment = await Shipment.create({
       ...data,
       customerId: req.user.id,
