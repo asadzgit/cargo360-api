@@ -444,57 +444,58 @@ exports.confirmDeletion = async (req, res, next) => {
 };
 
 // ---------------- Phone-based OTP/PIN flow ----------------
-function genOtp() { return Math.floor(100000 + Math.random() * 900000).toString(); }
+function genOtp() { 
+  return Math.floor(100000 + Math.random() * 900000).toString(); 
+}
 
 async function sendOtpSms(phone, code) {
-  async function sendOtpSms(phone, code) {
-    const url = process.env.SMS_GATEWAY_URL || 'https://secure.h3techs.com/sms/api/send';
-    const email = process.env.SMS_GATEWAY_EMAIL || 'asadmahmood41999@gmail.com';
-    const key   = process.env.SMS_GATEWAY_KEY   || '104c92c66802b374db7787ecfd4e27ec09';
-    // Use the exact approved mask that works in your curl; change if needed
-    const mask  = process.env.SMS_SENDER_MASK   || 'H3 TEST SMS';
-    const to    = normalizeToGateway(phone);
-    const message = `Cargo360 verification code: ${code}. Expires in 5 minutes. Do not share this code with anyone.`;
-  
-    console.log('[OTP] curl sending', { to, mask, url });
-  
-    const args = [
-      '-sS',
-      '-X', 'POST', url,
-      '-d', `email=${email}`,
-      '-d', `key=${key}`,
-      '-d', `mask=${encodeURIComponent(mask)}`,   // curl handles encoding; safe to pre-encode spaces
-      '-d', `to=${to}`,
-      '-d', `message=${encodeURIComponent(message)}`
-    ];
-  
-    const stdout = await new Promise((resolve, reject) => {
-      execFile('curl', args, { timeout: 15000 }, (error, out, err) => {
-        if (error) {
-          console.error('[OTP] curl error', { code: error.code, message: error.message, stderr: err });
-          return reject(error);
-        }
-        if (err) console.warn('[OTP] curl stderr', err);
-        console.log('[OTP] curl stdout', out);
-        resolve(out);
-      });
-    });
-  
-    // Provider usually returns JSON with { sms: { code: '000', response: 'Message Queued Successfully', ... } }
-    try {
-      const parsed = JSON.parse(stdout);
-      console.log(`parsed response: ${parsed}`);
-      
-      const sms = parsed.sms || parsed;
-      if (!(sms.code === '000' && /Queued/i.test(sms.response))) {
-        throw new Error(`OTP SMS failed: ${sms.code} ${sms.response}`);
+  const url = process.env.SMS_GATEWAY_URL || 'https://secure.h3techs.com/sms/api/send';
+  const email = process.env.SMS_GATEWAY_EMAIL || 'asadmahmood41999@gmail.com';
+  const key   = process.env.SMS_GATEWAY_KEY   || '104c92c66802b374db7787ecfd4e27ec09';
+  // Use the exact approved mask that works in your curl; change if needed
+  const mask  = process.env.SMS_SENDER_MASK   || 'H3 TEST SMS';
+  const to    = normalizeToGateway(phone);
+  const message = `Cargo360 verification code: ${code}. Expires in 5 minutes. Do not share this code with anyone.`;
+
+  console.log('[OTP] curl sending', { to, mask, url });
+
+  const args = [
+    '-sS',
+    '-X', 'POST', url,
+    '-d', `email=${email}`,
+    '-d', `key=${key}`,
+    '-d', `mask=${encodeURIComponent(mask)}`,   // curl handles encoding; safe to pre-encode spaces
+    '-d', `to=${to}`,
+    '-d', `message=${encodeURIComponent(message)}`
+  ];
+
+  const stdout = await new Promise((resolve, reject) => {
+    execFile('curl', args, { timeout: 15000 }, (error, out, err) => {
+      if (error) {
+        console.error('[OTP] curl error', { code: error.code, message: error.message, stderr: err });
+        return reject(error);
       }
-    } catch (e) {
-      // If body isn’t JSON, rely on stdout logs; only throw if this was a JSON parse error AND body contained obvious error text
-      if (e.name !== 'SyntaxError') throw e;
+      if (err) console.warn('[OTP] curl stderr', err);
+      console.log('[OTP] curl stdout', out);
+      resolve(out);
+    });
+  });
+
+  // Provider usually returns JSON with { sms: { code: '000', response: 'Message Queued Successfully', ... } }
+  try {
+    const parsed = JSON.parse(stdout);
+    console.log(`parsed response: ${parsed}`);
+    
+    const sms = parsed.sms || parsed;
+    if (!(sms.code === '000' && /Queued/i.test(sms.response))) {
+      throw new Error(`OTP SMS failed: ${sms.code} ${sms.response}`);
     }
+  } catch (e) {
+    // If body isn’t JSON, rely on stdout logs; only throw if this was a JSON parse error AND body contained obvious error text
+    if (e.name !== 'SyntaxError') throw e;
   }
 }
+
 // POST /auth/phone/check
 exports.phoneCheck = async (req, res, next) => {
   try {
