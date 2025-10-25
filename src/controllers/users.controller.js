@@ -1,4 +1,5 @@
 const bcrypt = require('bcryptjs');
+const { Op } = require('sequelize');
 const { updateMeSchema } = require('../validation/profile.schema');
 const { User } = require('../../models');
 
@@ -104,4 +105,43 @@ exports.addDriver = async (req, res, next) => {
   } catch (e) {
     next(e);
   }
+};
+
+// GET /users/drivers (broker-only) - list drivers linked to this broker
+exports.listDrivers = async (req, res, next) => {
+  try {
+    // Role already enforced by middleware; double-check for safety
+    if (req.user?.role !== 'trucker' && req.user?.role !== 'admin') {
+      return next(Object.assign(new Error('Forbidden'), { status: 403 }));
+    }
+
+    const q = (req.query.q || '').trim();
+    const limit = Math.min(parseInt(req.query.limit || '20', 10) || 20, 100);
+    const offset = parseInt(req.query.offset || '0', 10) || 0;
+    const ipvRaw = req.query.isPhoneVerified;
+    const truthy = new Set(['true','1','on','yes',1,true]);
+    const falsy = new Set(['false','0','off','no',0,false]);
+
+    const where = { brokerId: req.user.id, role: 'driver' };
+    if (q) {
+      where[Op.or] = [
+        { name: { [Op.iLike]: `%${q}%` } },
+        { phone: { [Op.iLike]: `%${q}%` } }
+      ];
+    }
+    if (ipvRaw !== undefined) {
+      if (truthy.has(ipvRaw)) where.isPhoneVerified = true;
+      else if (falsy.has(ipvRaw)) where.isPhoneVerified = false;
+    }
+
+    const { rows, count } = await User.findAndCountAll({
+      where,
+      attributes: ['id','name','phone','role','isPhoneVerified','brokerId','createdAt'],
+      limit,
+      offset,
+      order: [['createdAt','DESC']]
+    });
+
+    res.json({ success: true, data: { count, drivers: rows } });
+  } catch (e) { next(e); }
 };
