@@ -51,10 +51,10 @@ exports.signup = async (req, res, next) => {
     const emailExists = await User.findOne({ where: { email: data.email } });
     if (emailExists) return next(createError('An account with this email already exists', ERROR_CODES.EMAIL_ALREADY_EXISTS, 409));
     
-    // Check for existing phone (only if phone is provided)
-    if (data.phone) {
-      const phoneExists = await User.findOne({ where: { phone: data.phone } });
-      if (phoneExists) return next(createError('An account with this phone number already exists', ERROR_CODES.PHONE_ALREADY_EXISTS, 409));
+    // Check for existing phone within broker/driver cohort only
+    if (data.phone && (data.role === 'trucker' || data.role === 'driver')) {
+      const phoneExists = await User.findOne({ where: { phone: data.phone, role: { [Op.in]: ['trucker','driver'] } } });
+      if (phoneExists) return next(createError('An account with this phone number already exists for a driver/broker', ERROR_CODES.PHONE_ALREADY_EXISTS, 409));
     }
 
     const passwordHash = await bcrypt.hash(data.password, 10);
@@ -501,14 +501,10 @@ exports.phoneCheck = async (req, res, next) => {
   try {
     const data = await phoneCheckSchema.validateAsync(req.body, { stripUnknown: true });
     const { phone } = data;
-    const user = await User.findOne({ where: { phone } });
+    const user = await User.findOne({ where: { phone, role: { [Op.in]: ['trucker','driver'] } } });
 
     if (!user) {
       return res.json({ exists: false, nextStep: 'signup_required' });
-    }
-
-    if (!(user.role === 'trucker' || user.role === 'driver')) {
-      return next(createError('Phone belongs to another account type', ERROR_CODES.UNAUTHORIZED, 403));
     }
 
     if (!user.isPhoneVerified) {
@@ -550,8 +546,8 @@ exports.phoneSignup = async (req, res, next) => {
       return next(createError('Invalid role', ERROR_CODES.INVALID_ROLE, 400));
     }
 
-    const exists = await User.findOne({ where: { phone } });
-    if (exists) return next(createError('An account with this phone number already exists', ERROR_CODES.PHONE_ALREADY_EXISTS, 409));
+    const exists = await User.findOne({ where: { phone, role: { [Op.in]: ['trucker','driver'] } } });
+    if (exists) return next(createError('An account with this phone number already exists for a driver/broker', ERROR_CODES.PHONE_ALREADY_EXISTS, 409));
 
     const code = genOtp();
     const exp = new Date(Date.now() + 10 * 60 * 1000);
