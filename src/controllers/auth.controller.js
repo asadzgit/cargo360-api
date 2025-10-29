@@ -36,6 +36,29 @@ function normalizePhoneE164(pkPhone) {
 }
 
 
+// Core extractor and variants for Pakistan MSISDNs
+function pkCore(msisdn) {
+  const raw = (msisdn || '').replace(/\s+/g, '').replace(/^\+/, '');
+  if (/^92\d{10}$/.test(raw)) return raw.slice(2);     // 923XXXXXXXXX -> 3XXXXXXXXX
+  if (/^0\d{10}$/.test(raw)) return raw.slice(1);      // 03XXXXXXXXX  -> 3XXXXXXXXX
+  if (/^3\d{9}$/.test(raw)) return raw;                // 3XXXXXXXXX    -> 3XXXXXXXXX
+  return raw; // fallback (non-PK or unexpected)
+}
+
+function pkPhoneVariants(input) {
+  const core = pkCore(input);
+  if (!/^\d{10}$/.test(core)) {
+    // If not a 10-digit core, still return trimmed + raw as best-effort
+    const trimmed = (input || '').replace(/\s+/g, '');
+    return Array.from(new Set([trimmed, trimmed.replace(/^\+/, '')]));
+  }
+  return [
+    '+92' + core,  // E.164
+    '92' + core,   // Gateway numeric
+    '0' + core     // Local format
+  ];
+}
+
 const signTokens = (user) => {
   const payload = { id: user.id, role: user.role };
   const accessToken = jwt.sign(payload, jwtCfg.accessSecret, { expiresIn: jwtCfg.accessExpires });
@@ -51,9 +74,11 @@ exports.signup = async (req, res, next) => {
     const emailExists = await User.findOne({ where: { email: data.email } });
     if (emailExists) return next(createError('An account with this email already exists', ERROR_CODES.EMAIL_ALREADY_EXISTS, 409));
     
-    // Check for existing phone within broker/driver cohort only
-    if (data.phone && (data.role === 'trucker' || data.role === 'driver')) {
-      const phoneExists = await User.findOne({ where: { phone: data.phone, role: { [Op.in]: ['trucker','driver'] } } });
+    // Normalize phone and check for existing within broker/driver cohort only
+    const normalizedPhone = data.phone ? normalizePhoneE164(data.phone) : null;
+    if (normalizedPhone && (data.role === 'trucker' || data.role === 'driver')) {
+      const variants = pkPhoneVariants(normalizedPhone);
+      const phoneExists = await User.findOne({ where: { phone: { [Op.in]: variants }, role: { [Op.in]: ['trucker','driver'] } } });
       if (phoneExists) return next(createError('An account with this phone number already exists for a driver/broker', ERROR_CODES.PHONE_ALREADY_EXISTS, 409));
     }
 
@@ -68,7 +93,7 @@ exports.signup = async (req, res, next) => {
     const user = await User.create({
       name: data.name,
       email: data.email,
-      phone: data.phone,
+      phone: normalizedPhone,
       passwordHash,
       role,
       isApproved,
@@ -500,8 +525,9 @@ async function sendOtpSms(phone, code) {
 exports.phoneCheck = async (req, res, next) => {
   try {
     const data = await phoneCheckSchema.validateAsync(req.body, { stripUnknown: true });
-    const { phone } = data;
-    const user = await User.findOne({ where: { phone, role: { [Op.in]: ['trucker','driver'] } } });
+    const { phone: inputPhone } = data;
+    const variants = pkPhoneVariants(inputPhone);
+    const user = await User.findOne({ where: { phone: { [Op.in]: variants }, role: { [Op.in]: ['trucker','driver'] } } });
 
     if (!user) {
       return res.json({ exists: false, nextStep: 'signup_required' });
@@ -541,19 +567,20 @@ exports.phoneSignup = async (req, res, next) => {
   try {
     const data = await phoneSignupSchema.validateAsync(req.body, { stripUnknown: true });
     const { name, phone, role } = data;
+    const phoneNormalized = normalizePhoneE164(phone);
 
     if (!(role === 'trucker' || role === 'driver')) {
       return next(createError('Invalid role', ERROR_CODES.INVALID_ROLE, 400));
     }
 
-    const exists = await User.findOne({ where: { phone, role: { [Op.in]: ['trucker','driver'] } } });
+    const exists = await User.findOne({ where: { phone: { [Op.in]: pkPhoneVariants(phoneNormalized) }, role: { [Op.in]: ['trucker','driver'] } } });
     if (exists) return next(createError('An account with this phone number already exists for a driver/broker', ERROR_CODES.PHONE_ALREADY_EXISTS, 409));
 
     const code = genOtp();
     const exp = new Date(Date.now() + 10 * 60 * 1000);
     const user = await User.create({
       name,
-      phone,
+      phone: phoneNormalized,
       role,
       isApproved: role === 'trucker' ? false : true,
       isEmailVerified: false,
@@ -575,7 +602,7 @@ exports.phoneSignup = async (req, res, next) => {
 exports.verifyOtp = async (req, res, next) => {
   try {
     const { phone, otp } = await verifyOtpSchema.validateAsync(req.body, { stripUnknown: true });
-    const user = await User.findOne({ where: { phone } });
+    const user = await User.findOne({ where: { phone: { [Op.in]: pkPhoneVariants(phone) } } });
     if (!user) return next(createError('User not found', ERROR_CODES.USER_NOT_FOUND, 404));
     if (!user.otpCode || !user.otpExpires || new Date(user.otpExpires) < new Date()) {
       return next(createError('Invalid or expired OTP', ERROR_CODES.INVALID_TOKEN, 400));
@@ -595,7 +622,7 @@ exports.verifyOtp = async (req, res, next) => {
 exports.setPin = async (req, res, next) => {
   try {
     const { phone, pin } = await setPinSchema.validateAsync(req.body, { stripUnknown: true });
-    const user = await User.findOne({ where: { phone } });
+    const user = await User.findOne({ where: { phone: { [Op.in]: pkPhoneVariants(phone) } } });
     if (!user) return next(createError('User not found', ERROR_CODES.USER_NOT_FOUND, 404));
     if (!user.isPhoneVerified) return next(createError('Phone not verified', ERROR_CODES.UNAUTHORIZED, 403));
     const hash = await bcrypt.hash(pin, 10);
@@ -611,7 +638,7 @@ exports.setPin = async (req, res, next) => {
 exports.phoneLogin = async (req, res, next) => {
   try {
     const { phone, pin } = await phoneLoginSchema.validateAsync(req.body, { stripUnknown: true });
-    const user = await User.findOne({ where: { phone } });
+    const user = await User.findOne({ where: { phone: { [Op.in]: pkPhoneVariants(phone) } } });
     if (!user) return next(createError('Invalid phone or PIN', ERROR_CODES.INVALID_CREDENTIALS, 401));
     if (!user.isPhoneVerified) return next(createError('Please verify your phone number first', ERROR_CODES.UNAUTHORIZED, 403));
     const ok = await bcrypt.compare(pin, user.passwordHash || '');
@@ -628,7 +655,7 @@ exports.phoneLogin = async (req, res, next) => {
 exports.resendOtp = async (req, res, next) => {
   try {
     const { phone } = await resendOtpSchema.validateAsync(req.body, { stripUnknown: true });
-    const user = await User.findOne({ where: { phone } });
+    const user = await User.findOne({ where: { phone: { [Op.in]: pkPhoneVariants(phone) } } });
     if (!user) return next(createError('User not found', ERROR_CODES.USER_NOT_FOUND, 404));
     const code = genOtp();
     const exp = new Date(Date.now() + 10 * 60 * 1000);
