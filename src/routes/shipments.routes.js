@@ -4,6 +4,7 @@ const requireRole = require('../middlewares/roles');
 const adminOnly = require('../middlewares/adminOnly');
 const ctrl = require('../controllers/shipments.controller');
 const discountRequestsCtrl = require('../controllers/discountRequests.controller');
+const assignmentCtrl = require('../controllers/assignment.controller');
 
 // Admin routes (moderator can view, only admin can delete)
 router.get('/', auth, requireRole('admin'), ctrl.getAll);
@@ -27,6 +28,9 @@ router.get('/available-driver', auth, requireRole('driver'), ctrl.availableForTr
 router.post('/:id/accept-driver', auth, requireRole('driver'), ctrl.accept);
 router.patch('/:id/status-driver', auth, requireRole('driver'), ctrl.updateStatus);
 router.get('/mine-driver', auth, requireRole('driver'), ctrl.mineTrucker);
+
+// Broker (trucker) assigns a driver they own
+router.patch('/:id/assign-driver', auth, requireRole('trucker'), assignmentCtrl.assignDriverByBroker);
 
 // Shared routes (customer, trucker, driver, admin can view)
 router.get('/:id', auth, ctrl.getById);

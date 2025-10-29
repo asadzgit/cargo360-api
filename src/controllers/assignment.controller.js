@@ -1,5 +1,5 @@
 const { Shipment, User } = require('../../models/index');
-const { assignmentSchema } = require('../validation/shipments.schema');
+const { assignmentSchema, assignDriverByBrokerSchema } = require('../validation/shipments.schema');
 
 // ASSIGN - PATCH /shipments/:id/assign (Admin assigns trucker or driver)
 exports.assign = async (req, res, next) => {
@@ -62,6 +62,56 @@ exports.assign = async (req, res, next) => {
     res.json({
       success: true,
       message: `Shipment assigned to ${data.assignment} successfully`,
+      data: { shipment: updatedShipment }
+    });
+  } catch (e) { next(e); }
+};
+
+// BROKER ASSIGN DRIVER - PATCH /shipments/:id/assign-driver (Trucker assigns their driver)
+exports.assignDriverByBroker = async (req, res, next) => {
+  try {
+    const { driverId } = await assignDriverByBrokerSchema.validateAsync(req.body, { stripUnknown: true });
+    const shipmentId = req.params.id;
+    const brokerId = req.user?.id;
+
+    // Ensure auth has a broker/trucker user
+    if (!brokerId) return next(Object.assign(new Error('Unauthorized'), { status: 401 }));
+
+    // Find shipment and ensure broker has rights: either already assigned to this broker or unassigned
+    const shipment = await Shipment.findByPk(shipmentId);
+    if (!shipment) return next(Object.assign(new Error('Shipment not found'), { status: 404 }));
+
+    if (shipment.truckerId && shipment.truckerId !== brokerId) {
+      return next(Object.assign(new Error('You are not allowed to assign a driver to this shipment'), { status: 403 }));
+    }
+
+    // Validate driver belongs to this broker
+    const driver = await User.findByPk(driverId);
+    if (!driver) return next(Object.assign(new Error('Driver not found'), { status: 404 }));
+    if (driver.role !== 'driver') return next(Object.assign(new Error('User is not a driver'), { status: 400 }));
+    if (driver.brokerId !== brokerId) return next(Object.assign(new Error('Driver does not belong to your fleet'), { status: 403 }));
+
+    // Set truckerId to broker if not already set
+    const updateData = {};
+    if (!shipment.truckerId) updateData.truckerId = brokerId;
+    updateData.driverId = driverId;
+
+    // Update status to accepted if pending
+    if (shipment.status === 'pending') updateData.status = 'accepted';
+
+    await shipment.update(updateData);
+
+    const updatedShipment = await Shipment.findByPk(shipmentId, {
+      include: [
+        { model: User, as: 'Customer', attributes: ['id', 'name', 'email', 'phone'] },
+        { model: User, as: 'Trucker', attributes: ['id', 'name', 'email', 'phone'] },
+        { model: User, as: 'Driver', attributes: ['id', 'name', 'email', 'phone'] }
+      ]
+    });
+
+    res.json({
+      success: true,
+      message: 'Driver assigned to shipment successfully',
       data: { shipment: updatedShipment }
     });
   } catch (e) { next(e); }

@@ -41,6 +41,11 @@ exports.assignmentSchema = Joi.object({
   userId: Joi.number().integer().min(1).required()
 });
 
+// Assignment validation for broker (trucker) to assign a driver they own
+exports.assignDriverByBrokerSchema = Joi.object({
+  driverId: Joi.number().integer().min(1).required()
+});
+
 // Query parameters validation
 exports.queryShipmentsSchema = Joi.object({
   status: Joi.string().valid('pending', 'accepted', 'picked_up', 'in_transit', 'delivered', 'cancelled').optional(),
