@@ -21,7 +21,9 @@ const app = express();
 app.use(helmet());
 app.use(cookieParser());
 app.use(cors({ origin: ['https://admin.cargo360pk.com', 'admin.cargo360pk.com', 'www.admin.cargo360pk.com',
-  'http://localhost:3000', 'http://localhost:5173','https://cargo360pk.com', 'www.cargo360pk.com', 'cargo360pk.com'], credentials: true }));
+  'https://www.admin.cargo360pk.com',
+  'http://localhost:3000', 'http://localhost:5173','https://cargo360pk.com', 'www.cargo360pk.com',
+  'https://www.cargo360pk.com', 'cargo360pk.com'], credentials: true }));
 app.use(express.json({ limit: '1mb' }));
 // --- Detailed request/response logger with redaction ---
 const SENSITIVE_KEYS = new Set([
