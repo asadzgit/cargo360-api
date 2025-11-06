@@ -20,10 +20,30 @@ const app = express();
 // Middlewares
 app.use(helmet());
 app.use(cookieParser());
-app.use(cors({ origin: ['https://admin.cargo360pk.com', 'admin.cargo360pk.com', 'www.admin.cargo360pk.com',
-  'https://www.admin.cargo360pk.com',
-  'http://localhost:3000', 'http://localhost:5173','https://cargo360pk.com', 'www.cargo360pk.com',
-  'https://www.cargo360pk.com', 'cargo360pk.com'], credentials: true }));
+
+// Dynamic CORS configuration
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // Allow localhost for development
+    if (origin.includes('localhost')) {
+      return callback(null, true);
+    }
+    
+    // Allow any domain containing admin.cargo360pk.com or cargo360pk.com
+    if (origin.includes('admin.cargo360pk.com') || origin.includes('cargo360pk.com')) {
+      return callback(null, true);
+    }
+    
+    // Reject all other origins
+    callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true
+};
+
+app.use(cors(corsOptions));
 app.use(express.json({ limit: '1mb' }));
 // --- Detailed request/response logger with redaction ---
 const SENSITIVE_KEYS = new Set([
