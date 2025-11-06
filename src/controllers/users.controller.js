@@ -74,34 +74,128 @@ exports.deleteMe = async (req, res, next) => {
 exports.addDriver = async (req, res, next) => {
   try {
     const { name, phone } = req.body || {};
-    if (!name || !phone) return next(Object.assign(new Error('Name and phone are required'), { status: 400 }));
+    if (!phone) return next(Object.assign(new Error('Phone is required'), { status: 400 }));
 
     // Ensure caller is trucker/broker (role middleware also enforces)
     if (req.user?.role !== 'trucker' && req.user?.role !== 'admin') {
       return next(Object.assign(new Error('Forbidden'), { status: 403 }));
     }
 
-    // Check if phone exists
-    const existing = await require('../../models').User.findOne({ where: { phone } });
-    if (existing) return next(Object.assign(new Error('An account with this phone number already exists'), { status: 409 }));
+    const { User, BrokerDriver } = require('../../models');
+    
+    // Normalize phone variants for lookup
+    const normalizePhoneE164 = (pkPhone) => {
+      const trimmed = (pkPhone || '').replace(/\s+/g, '');
+      if (trimmed.startsWith('+')) return trimmed;
+      if (/^0\d{10}$/.test(trimmed)) return '+92' + trimmed.slice(1);
+      if (/^92\d{10}$/.test(trimmed)) return '+' + trimmed;
+      return trimmed;
+    };
+    
+    const pkPhoneVariants = (input) => {
+      const pkCore = (msisdn) => {
+        const raw = (msisdn || '').replace(/\s+/g, '').replace(/^\+/, '');
+        if (/^92\d{10}$/.test(raw)) return raw.slice(2);
+        if (/^0\d{10}$/.test(raw)) return raw.slice(1);
+        if (/^3\d{9}$/.test(raw)) return raw;
+        return raw;
+      };
+      const core = pkCore(input);
+      if (!/^\d{10}$/.test(core)) {
+        const trimmed = (input || '').replace(/\s+/g, '');
+        return Array.from(new Set([trimmed, trimmed.replace(/^\+/, '')]));
+      }
+      return ['+92' + core, '92' + core, '0' + core];
+    };
 
-    // Create driver linked to broker
-    const { User } = require('../../models');
+    const phoneNormalized = normalizePhoneE164(phone);
+    const phoneVariants = pkPhoneVariants(phoneNormalized);
+
+    // Check if driver already exists with this phone
+    let driver = await User.findOne({ 
+      where: { 
+        phone: { [Op.in]: phoneVariants },
+        role: 'driver'
+      } 
+    });
+
+    if (driver) {
+      // Driver exists - check if already linked to this broker
+      const existingLink = await BrokerDriver.findOne({
+        where: {
+          brokerId: req.user.id,
+          driverId: driver.id
+        }
+      });
+
+      if (existingLink) {
+        return res.status(200).json({ 
+          success: true,
+          driverId: driver.id, 
+          message: 'Driver is already linked to your account',
+          alreadyLinked: true
+        });
+      }
+
+      // Link existing driver to this broker
+      await BrokerDriver.create({
+        brokerId: req.user.id,
+        driverId: driver.id
+      });
+
+      return res.status(200).json({ 
+        success: true,
+        driverId: driver.id, 
+        message: 'Driver linked to your account successfully',
+        wasExisting: true
+      });
+    }
+
+    // Driver doesn't exist - create new driver
+    if (!name) return next(Object.assign(new Error('Name is required for new driver'), { status: 400 }));
+
+    // Check if a trucker (broker) exists with this phone (not allowed)
+    const truckerWithPhone = await User.findOne({
+      where: {
+        phone: { [Op.in]: phoneVariants },
+        role: 'trucker'
+      }
+    });
+
+    if (truckerWithPhone) {
+      return next(Object.assign(
+        new Error('This phone number is already used by a broker. Drivers and brokers cannot share phone numbers.'), 
+        { status: 409 }
+      ));
+    }
+
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     const exp = new Date(Date.now() + 10 * 60 * 1000);
-    const driver = await User.create({
+    driver = await User.create({
       name,
-      phone,
+      phone: phoneNormalized,
       role: 'driver',
-      brokerId: req.user.id,
+      brokerId: req.user.id, // Keep for backward compatibility
       isApproved: true,
       isPhoneVerified: false,
       otpCode: code,
       otpExpires: exp
     });
 
+    // Create broker-driver relationship in junction table
+    await BrokerDriver.create({
+      brokerId: req.user.id,
+      driverId: driver.id
+    });
+
     console.log(`[SMS] OTP to ${phone}: ${code}`);
-    res.status(201).json({ driverId: driver.id, nextStep: 'verify_otp', message: 'OTP sent to driver' });
+    res.status(201).json({ 
+      success: true,
+      driverId: driver.id, 
+      nextStep: 'verify_otp', 
+      message: 'Driver created and OTP sent',
+      wasExisting: false
+    });
   } catch (e) {
     next(e);
   }
@@ -115,6 +209,9 @@ exports.listDrivers = async (req, res, next) => {
       return next(Object.assign(new Error('Forbidden'), { status: 403 }));
     }
 
+    const { User, BrokerDriver } = require('../../models');
+    const { Sequelize } = require('sequelize');
+    
     const q = (req.query.q || '').trim();
     const limit = Math.min(parseInt(req.query.limit || '20', 10) || 20, 100);
     const offset = parseInt(req.query.offset || '0', 10) || 0;
@@ -122,26 +219,47 @@ exports.listDrivers = async (req, res, next) => {
     const truthy = new Set(['true','1','on','yes',1,true]);
     const falsy = new Set(['false','0','off','no',0,false]);
 
-    const where = { brokerId: req.user.id, role: 'driver' };
+    // Build where clause for User model
+    const userWhere = { role: 'driver' };
     if (q) {
-      where[Op.or] = [
+      userWhere[Op.or] = [
         { name: { [Op.iLike]: `%${q}%` } },
         { phone: { [Op.iLike]: `%${q}%` } }
       ];
     }
     if (ipvRaw !== undefined) {
-      if (truthy.has(ipvRaw)) where.isPhoneVerified = true;
-      else if (falsy.has(ipvRaw)) where.isPhoneVerified = false;
+      if (truthy.has(ipvRaw)) userWhere.isPhoneVerified = true;
+      else if (falsy.has(ipvRaw)) userWhere.isPhoneVerified = false;
     }
 
-    const { rows, count } = await User.findAndCountAll({
-      where,
-      attributes: ['id','name','phone','role','isPhoneVerified','brokerId','createdAt'],
+    // Get drivers linked to this broker through BrokerDriver junction table
+    const brokerDriverLinks = await BrokerDriver.findAll({
+      where: { brokerId: req.user.id },
+      include: [{
+        model: User,
+        as: 'Driver',
+        where: userWhere,
+        attributes: ['id','name','phone','role','isPhoneVerified','brokerId','createdAt']
+      }],
       limit,
       offset,
-      order: [['createdAt','DESC']]
+      order: [[{ model: User, as: 'Driver' }, 'createdAt', 'DESC']]
     });
 
-    res.json({ success: true, data: { count, drivers: rows } });
+    // Count total drivers for this broker matching the criteria
+    const count = await BrokerDriver.count({
+      where: { brokerId: req.user.id },
+      include: [{
+        model: User,
+        as: 'Driver',
+        where: userWhere,
+        attributes: []
+      }]
+    });
+
+    // Extract driver data from the results
+    const drivers = brokerDriverLinks.map(link => link.Driver);
+
+    res.json({ success: true, data: { count, drivers } });
   } catch (e) { next(e); }
 };

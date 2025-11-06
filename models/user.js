@@ -16,9 +16,22 @@ module.exports = (sequelize, DataTypes) => {
       User.hasMany(models.Review, { foreignKey: 'reviewerId', as: 'ReviewsGiven' });
       User.hasMany(models.Review, { foreignKey: 'revieweeId', as: 'ReviewsReceived' });
 
-      // 👤 Broker-driver hierarchy
-      User.belongsTo(models.User, { as: 'Broker', foreignKey: 'brokerId' });
-      User.hasMany(models.User, { as: 'Drivers', foreignKey: 'brokerId' });
+      // 👤 Many-to-many broker-driver relationship through BrokerDriver junction table
+      User.belongsToMany(models.User, { 
+        through: models.BrokerDriver,
+        as: 'Brokers',
+        foreignKey: 'driverId',
+        otherKey: 'brokerId'
+      });
+      User.belongsToMany(models.User, { 
+        through: models.BrokerDriver,
+        as: 'Drivers',
+        foreignKey: 'brokerId',
+        otherKey: 'driverId'
+      });
+
+      // Keep old brokerId field for backward compatibility (will be deprecated)
+      User.belongsTo(models.User, { as: 'PrimaryBroker', foreignKey: 'brokerId' });
     }
   }
   User.init({

@@ -74,12 +74,44 @@ exports.signup = async (req, res, next) => {
     const emailExists = await User.findOne({ where: { email: data.email } });
     if (emailExists) return next(createError('An account with this email already exists', ERROR_CODES.EMAIL_ALREADY_EXISTS, 409));
     
-    // Normalize phone and check for existing within broker/driver cohort only
+    // Normalize phone and check for existing within the same role
     const normalizedPhone = data.phone ? normalizePhoneE164(data.phone) : null;
-    if (normalizedPhone && (data.role === 'trucker' || data.role === 'driver')) {
+    if (normalizedPhone) {
       const variants = pkPhoneVariants(normalizedPhone);
-      const phoneExists = await User.findOne({ where: { phone: { [Op.in]: variants }, role: { [Op.in]: ['trucker','driver'] } } });
-      if (phoneExists) return next(createError('An account with this phone number already exists for a driver/broker', ERROR_CODES.PHONE_ALREADY_EXISTS, 409));
+      
+      // Check if phone exists for the same role
+      const phoneExists = await User.findOne({ 
+        where: { 
+          phone: { [Op.in]: variants }, 
+          role: data.role 
+        } 
+      });
+      if (phoneExists) {
+        return next(createError(`An account with this phone number already exists for role: ${data.role}`, ERROR_CODES.PHONE_ALREADY_EXISTS, 409));
+      }
+
+      // Additional check: driver and trucker cannot share phone numbers
+      if (data.role === 'trucker') {
+        const driverWithPhone = await User.findOne({ 
+          where: { 
+            phone: { [Op.in]: variants }, 
+            role: 'driver' 
+          } 
+        });
+        if (driverWithPhone) {
+          return next(createError('This phone number is already used by a driver. Drivers and brokers cannot share phone numbers.', ERROR_CODES.PHONE_ALREADY_EXISTS, 409));
+        }
+      } else if (data.role === 'driver') {
+        const truckerWithPhone = await User.findOne({ 
+          where: { 
+            phone: { [Op.in]: variants }, 
+            role: 'trucker' 
+          } 
+        });
+        if (truckerWithPhone) {
+          return next(createError('This phone number is already used by a broker. Drivers and brokers cannot share phone numbers.', ERROR_CODES.PHONE_ALREADY_EXISTS, 409));
+        }
+      }
     }
 
     const passwordHash = await bcrypt.hash(data.password, 10);
@@ -525,9 +557,9 @@ async function sendOtpSms(phone, code) {
 exports.phoneCheck = async (req, res, next) => {
   try {
     const data = await phoneCheckSchema.validateAsync(req.body, { stripUnknown: true });
-    const { phone: inputPhone } = data;
+    const { phone: inputPhone, role } = data;
     const variants = pkPhoneVariants(inputPhone);
-    const user = await User.findOne({ where: { phone: { [Op.in]: variants }, role: { [Op.in]: ['trucker','driver'] } } });
+    const user = await User.findOne({ where: { phone: { [Op.in]: variants }, role: role } });
 
     if (!user) {
       return res.json({ exists: false, nextStep: 'signup_required' });
@@ -573,8 +605,41 @@ exports.phoneSignup = async (req, res, next) => {
       return next(createError('Invalid role', ERROR_CODES.INVALID_ROLE, 400));
     }
 
-    const exists = await User.findOne({ where: { phone: { [Op.in]: pkPhoneVariants(phoneNormalized) }, role: { [Op.in]: ['trucker','driver'] } } });
-    if (exists) return next(createError('An account with this phone number already exists for a driver/broker', ERROR_CODES.PHONE_ALREADY_EXISTS, 409));
+    const variants = pkPhoneVariants(phoneNormalized);
+
+    // Check if phone exists for the same role
+    const exists = await User.findOne({ 
+      where: { 
+        phone: { [Op.in]: variants }, 
+        role: role 
+      } 
+    });
+    if (exists) {
+      return next(createError(`An account with this phone number already exists for role: ${role}`, ERROR_CODES.PHONE_ALREADY_EXISTS, 409));
+    }
+
+    // Additional check: driver and trucker cannot share phone numbers
+    if (role === 'trucker') {
+      const driverWithPhone = await User.findOne({ 
+        where: { 
+          phone: { [Op.in]: variants }, 
+          role: 'driver' 
+        } 
+      });
+      if (driverWithPhone) {
+        return next(createError('This phone number is already used by a driver. Drivers and brokers cannot share phone numbers.', ERROR_CODES.PHONE_ALREADY_EXISTS, 409));
+      }
+    } else if (role === 'driver') {
+      const truckerWithPhone = await User.findOne({ 
+        where: { 
+          phone: { [Op.in]: variants }, 
+          role: 'trucker' 
+        } 
+      });
+      if (truckerWithPhone) {
+        return next(createError('This phone number is already used by a broker. Drivers and brokers cannot share phone numbers.', ERROR_CODES.PHONE_ALREADY_EXISTS, 409));
+      }
+    }
 
     const code = genOtp();
     const exp = new Date(Date.now() + 10 * 60 * 1000);
