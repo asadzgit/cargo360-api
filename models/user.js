@@ -36,6 +36,7 @@ module.exports = (sequelize, DataTypes) => {
   }
   User.init({
     name: DataTypes.STRING,
+    company: DataTypes.STRING,
     email: DataTypes.STRING,
     phone: DataTypes.STRING, // should be UNIQUE at DB level
     passwordHash: {

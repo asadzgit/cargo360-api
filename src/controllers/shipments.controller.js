@@ -27,7 +27,7 @@ exports.create = async (req, res, next) => {
     
     // Include customer info in response
     const shipmentWithCustomer = await Shipment.findByPk(shipment.id, {
-      include: [{ model: User, as: 'Customer', attributes: ['id', 'name', 'email'] }]
+      include: [{ model: User, as: 'Customer', attributes: ['id', 'name', 'company', 'email'] }]
     });
     
     // TODO: notify truckers (email/SMS/push) in background
@@ -50,7 +50,7 @@ exports.mineCustomer = async (req, res, next) => {
     const shipments = await Shipment.findAll({
       where: whereClause,
       include: [
-        { model: User, as: 'Trucker', attributes: ['id', 'name', 'phone'] },
+        { model: User, as: 'Trucker', attributes: ['id', 'name', 'company', 'phone'] },
         { model: DiscountRequest, as: 'DiscountRequest', attributes: ['id','requestAmount','status'] }
       ],  
       order: [['createdAt', 'DESC']]
@@ -74,7 +74,7 @@ exports.availableForTruckers = async (req, res, next) => {
     const shipments = await Shipment.findAll({
       where: whereClause,
       include: [
-        { model: User, as: 'Customer', attributes: ['id', 'name', 'phone'] },
+        { model: User, as: 'Customer', attributes: ['id', 'name', 'company', 'phone'] },
         { model: DiscountRequest, as: 'DiscountRequest', attributes: ['id','requestAmount','status'] }
       ],
       order: [['createdAt', 'DESC']]
@@ -111,8 +111,8 @@ exports.accept = async (req, res, next) => {
     
     const updated = await Shipment.findByPk(shipmentId, {
       include: [
-        { model: User, as: 'Customer', attributes: ['id', 'name', 'phone'] },
-        { model: User, as: 'Trucker', attributes: ['id', 'name', 'phone'] },
+        { model: User, as: 'Customer', attributes: ['id', 'name', 'company', 'phone'] },
+        { model: User, as: 'Trucker', attributes: ['id', 'name', 'company', 'phone'] },
         { model: DiscountRequest, as: 'DiscountRequest', attributes: ['id','requestAmount','status'] },
       ]
     });
@@ -143,8 +143,8 @@ exports.updateStatus = async (req, res, next) => {
     
     const updated = await Shipment.findByPk(shipment.id, {
       include: [
-        { model: User, as: 'Customer', attributes: ['id', 'name', 'phone'] },
-        { model: User, as: 'Trucker', attributes: ['id', 'name', 'phone'] },
+        { model: User, as: 'Customer', attributes: ['id', 'name', 'company', 'phone'] },
+        { model: User, as: 'Trucker', attributes: ['id', 'name', 'company', 'phone'] },
         { model: DiscountRequest, as: 'DiscountRequest', attributes: ['id','requestAmount','status'] },
       ]
     });
@@ -176,9 +176,9 @@ exports.mineTrucker = async (req, res, next) => {
     const shipments = await Shipment.findAll({
       where: whereClause,
       include: [
-        { model: User, as: 'Customer', attributes: ['id', 'name', 'phone'] },
-        { model: User, as: 'Trucker', attributes: ['id', 'name', 'phone'] },
-        { model: User, as: 'Driver', attributes: ['id', 'name', 'phone'] },
+        { model: User, as: 'Customer', attributes: ['id', 'name', 'company', 'phone'] },
+        { model: User, as: 'Trucker', attributes: ['id', 'name', 'company', 'phone'] },
+        { model: User, as: 'Driver', attributes: ['id', 'name', 'company', 'phone'] },
         { model: DiscountRequest, as: 'DiscountRequest', attributes: ['id','requestAmount','status'] },
         { 
           model: ShipmentLocation, 
@@ -235,7 +235,7 @@ exports.cancelByCustomer = async (req, res, next) => {
     await shipment.update({ status: 'cancelled' });
     
     const updated = await Shipment.findByPk(shipment.id, {
-      include: [{ model: User, as: 'Customer', attributes: ['id', 'name', 'phone'] }]
+      include: [{ model: User, as: 'Customer', attributes: ['id', 'name', 'company', 'phone'] }]
     });
     
     res.json({ 
@@ -251,8 +251,8 @@ exports.getById = async (req, res, next) => {
   try {
     const shipment = await Shipment.findByPk(req.params.id, {
       include: [
-        { model: User, as: 'Customer', attributes: ['id', 'name', 'phone'] },
-        { model: User, as: 'Trucker', attributes: ['id', 'name', 'phone'] },
+        { model: User, as: 'Customer', attributes: ['id', 'name', 'company', 'phone'] },
+        { model: User, as: 'Trucker', attributes: ['id', 'name', 'company', 'phone'] },
         { model: DiscountRequest, as: 'DiscountRequest', attributes: ['id','requestAmount','status'] },
       ]
     });
@@ -295,7 +295,7 @@ exports.update = async (req, res, next) => {
     
     const updated = await Shipment.findByPk(shipment.id, {
       include: [
-        { model: User, as: 'Customer', attributes: ['id', 'name', 'phone'] },
+        { model: User, as: 'Customer', attributes: ['id', 'name', 'company', 'phone'] },
         { model: DiscountRequest, as: 'DiscountRequest', attributes: ['id','requestAmount','status'] },
       ]
     });
@@ -338,9 +338,9 @@ exports.getAll = async (req, res, next) => {
     const shipments = await Shipment.findAll({
       where: whereClause,
       include: [
-        { model: User, as: 'Customer', attributes: ['id', 'name', 'phone'] },
-        { model: User, as: 'Trucker', attributes: ['id', 'name', 'phone'] },
-        { model: User, as: 'Driver', attributes: ['id', 'name', 'phone'] },
+        { model: User, as: 'Customer', attributes: ['id', 'name', 'company', 'phone'] },
+        { model: User, as: 'Trucker', attributes: ['id', 'name', 'company', 'phone'] },
+        { model: User, as: 'Driver', attributes: ['id', 'name', 'company', 'phone'] },
         { model: DiscountRequest, as: 'DiscountRequest', attributes: ['id','requestAmount','status'] },
       ],
       order: [['createdAt', 'DESC']]

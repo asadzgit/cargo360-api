@@ -31,6 +31,7 @@ exports.updateMe = async (req, res, next) => {
     const result = {
       id: user.id,
       name: user.name,
+      company: user.company,
       email: user.email,
       phone: user.phone,
       role: user.role,

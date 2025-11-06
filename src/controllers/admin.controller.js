@@ -3,7 +3,7 @@ const { updateShipmentSchema } = require('../validation/shipments.schema');
 
 exports.listUsers = async (_req, res, next) => {
   try {
-    const users = await User.findAll({ attributes: ['id','name','email','role','isApproved','createdAt'] });
+    const users = await User.findAll({ attributes: ['id','name','company','email','role','isApproved','createdAt'] });
     res.json({ users });
   } catch (e) { next(e); }
 };
@@ -39,9 +39,9 @@ exports.updateShipment = async (req, res, next) => {
     
     const updated = await Shipment.findByPk(shipment.id, {
       include: [
-        { model: User, as: 'Customer', attributes: ['id', 'name', 'phone'] },
-        { model: User, as: 'Trucker', attributes: ['id', 'name', 'phone'] },
-        { model: User, as: 'Driver', attributes: ['id', 'name', 'phone'] }
+        { model: User, as: 'Customer', attributes: ['id', 'name', 'company', 'phone'] },
+        { model: User, as: 'Trucker', attributes: ['id', 'name', 'company', 'phone'] },
+        { model: User, as: 'Driver', attributes: ['id', 'name', 'company', 'phone'] }
       ]
     });
     

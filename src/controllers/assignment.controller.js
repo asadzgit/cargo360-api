@@ -53,9 +53,9 @@ exports.assign = async (req, res, next) => {
     // Fetch updated shipment with associations
     const updatedShipment = await Shipment.findByPk(shipmentId, {
       include: [
-        { model: User, as: 'Customer', attributes: ['id', 'name', 'email', 'phone'] },
-        { model: User, as: 'Trucker', attributes: ['id', 'name', 'email', 'phone'] },
-        { model: User, as: 'Driver', attributes: ['id', 'name', 'email', 'phone'] }
+        { model: User, as: 'Customer', attributes: ['id', 'name', 'company', 'email', 'phone'] },
+        { model: User, as: 'Trucker', attributes: ['id', 'name', 'company', 'email', 'phone'] },
+        { model: User, as: 'Driver', attributes: ['id', 'name', 'company', 'email', 'phone'] }
       ]
     });
     
@@ -103,9 +103,9 @@ exports.assignDriverByBroker = async (req, res, next) => {
 
     const updatedShipment = await Shipment.findByPk(shipmentId, {
       include: [
-        { model: User, as: 'Customer', attributes: ['id', 'name', 'email', 'phone'] },
-        { model: User, as: 'Trucker', attributes: ['id', 'name', 'email', 'phone'] },
-        { model: User, as: 'Driver', attributes: ['id', 'name', 'email', 'phone'] }
+        { model: User, as: 'Customer', attributes: ['id', 'name', 'company', 'email', 'phone'] },
+        { model: User, as: 'Trucker', attributes: ['id', 'name', 'company', 'email', 'phone'] },
+        { model: User, as: 'Driver', attributes: ['id', 'name', 'company', 'email', 'phone'] }
       ]
     });
 

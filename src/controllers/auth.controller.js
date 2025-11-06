@@ -124,6 +124,7 @@ exports.signup = async (req, res, next) => {
 
     const user = await User.create({
       name: data.name,
+      company: data.company || null,
       email: data.email,
       phone: normalizedPhone,
       passwordHash,
@@ -145,7 +146,7 @@ exports.signup = async (req, res, next) => {
     // Don't return tokens until email is verified
     res.status(201).json({ 
       message: 'Account created successfully. Please check your email to verify your account.',
-      user: { id: user.id, name: user.name, role: user.role, isApproved: user.isApproved, isEmailVerified: user.isEmailVerified }
+      user: { id: user.id, name: user.name, company: user.company, role: user.role, isApproved: user.isApproved, isEmailVerified: user.isEmailVerified }
     });
   } catch (e) { 
     if (e.isJoi) {
@@ -175,7 +176,7 @@ exports.login = async (req, res, next) => {
       return next(createError('Your trucker account is pending admin approval. Please wait for approval before logging in.', ERROR_CODES.ACCOUNT_NOT_APPROVED, 403));
     }
     const tokens = signTokens(user);
-    res.json({ user: { id: user.id, name: user.name, role: user.role, isApproved: user.isApproved, isEmailVerified: user.isEmailVerified }, ...tokens });
+    res.json({ user: { id: user.id, name: user.name, company: user.company, role: user.role, isApproved: user.isApproved, isEmailVerified: user.isEmailVerified }, ...tokens });
   } catch (e) { 
     if (e.isJoi) {
       return next(handleJoiError(e));
@@ -189,7 +190,7 @@ exports.login = async (req, res, next) => {
 
 exports.me = async (req, res, next) => {
   try {
-    const user = await User.findByPk(req.user.id, { attributes: ['id','name','email','phone','role','isApproved','isEmailVerified'] });
+    const user = await User.findByPk(req.user.id, { attributes: ['id','name','company','email','phone','role','isApproved','isEmailVerified'] });
     res.json({ user });
   } catch (e) { 
     if (e.isJoi) {
@@ -709,7 +710,7 @@ exports.phoneLogin = async (req, res, next) => {
     const ok = await bcrypt.compare(pin, user.passwordHash || '');
     if (!ok) return next(createError('Invalid phone or PIN', ERROR_CODES.INVALID_CREDENTIALS, 401));
     const tokens = signTokens(user);
-    res.json({ user: { id: user.id, name: user.name, role: user.role, isApproved: user.isApproved, isPhoneVerified: user.isPhoneVerified }, ...tokens });
+    res.json({ user: { id: user.id, name: user.name, company: user.company, role: user.role, isApproved: user.isApproved, isPhoneVerified: user.isPhoneVerified }, ...tokens });
   } catch (e) {
     if (e.isJoi) return next(handleJoiError(e));
     next(e);
