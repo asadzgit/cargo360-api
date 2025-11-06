@@ -3,7 +3,7 @@ const { updateShipmentSchema } = require('../validation/shipments.schema');
 
 exports.listUsers = async (_req, res, next) => {
   try {
-    const users = await User.findAll({ attributes: ['id','name','company','email','role','isApproved','createdAt'] });
+    const users = await User.findAll({ attributes: ['id','name','company','email','phone','role','isApproved','createdAt'] });
     res.json({ users });
   } catch (e) { next(e); }
 };
