@@ -273,7 +273,8 @@ exports.getById = async (req, res, next) => {
     const isAuthorized = 
       req.user.role === 'admin' ||
       shipment.customerId === req.user.id ||
-      shipment.truckerId === req.user.id;
+      shipment.truckerId === req.user.id ||
+      shipment.driverId === req.user.id;
     
     if (!isAuthorized) {
       return next(Object.assign(new Error('Unauthorized to view this shipment'), { status: 403 }));
