@@ -6,6 +6,7 @@ const {
   queryShipmentsSchema,
   assignmentSchema 
 } = require('../validation/shipments.schema');
+const { sendShipmentNotification } = require('../utils/emailService');
 const { Op } = require('sequelize');
 
 // CREATE - POST /shipments
@@ -30,7 +31,14 @@ exports.create = async (req, res, next) => {
       include: [{ model: User, as: 'Customer', attributes: ['id', 'name', 'company', 'email'] }]
     });
     
-    // TODO: notify truckers (email/SMS/push) in background
+    // Send notification emails to team (non-blocking)
+    try {
+      await sendShipmentNotification(shipmentWithCustomer.toJSON(), shipmentWithCustomer.Customer.toJSON());
+    } catch (emailError) {
+      console.error('Failed to send shipment notification email:', emailError);
+      // Don't fail the request if email fails
+    }
+    
     res.status(201).json({ 
       success: true,
       message: 'Shipment created successfully',
