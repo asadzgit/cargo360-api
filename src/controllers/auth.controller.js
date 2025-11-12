@@ -710,7 +710,7 @@ exports.phoneLogin = async (req, res, next) => {
     const ok = await bcrypt.compare(pin, user.passwordHash || '');
     if (!ok) return next(createError('Invalid phone or PIN', ERROR_CODES.INVALID_CREDENTIALS, 401));
     const tokens = signTokens(user);
-    res.json({ user: { id: user.id, name: user.name, company: user.company, role: user.role, isApproved: user.isApproved, isPhoneVerified: user.isPhoneVerified }, ...tokens });
+    res.json({ user: { id: user.id, name: user.name, company: user.company, phone: user.phone, role: user.role, isApproved: user.isApproved, isPhoneVerified: user.isPhoneVerified }, ...tokens });
   } catch (e) {
     if (e.isJoi) return next(handleJoiError(e));
     next(e);
