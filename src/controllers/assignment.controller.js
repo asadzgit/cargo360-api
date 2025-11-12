@@ -1,5 +1,6 @@
 const { Shipment, User } = require('../../models/index');
 const { assignmentSchema, assignDriverByBrokerSchema } = require('../validation/shipments.schema');
+const { formatShipmentDates } = require('../utils/dateFormatter');
 
 // ASSIGN - PATCH /shipments/:id/assign (Admin assigns trucker or driver)
 exports.assign = async (req, res, next) => {
@@ -62,7 +63,7 @@ exports.assign = async (req, res, next) => {
     res.json({
       success: true,
       message: `Shipment assigned to ${data.assignment} successfully`,
-      data: { shipment: updatedShipment }
+      data: { shipment: formatShipmentDates(updatedShipment) }
     });
   } catch (e) { next(e); }
 };

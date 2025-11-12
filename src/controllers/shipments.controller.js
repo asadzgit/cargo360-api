@@ -8,6 +8,7 @@ const {
 } = require('../validation/shipments.schema');
 const { sendShipmentNotification } = require('../utils/emailService');
 const { Op } = require('sequelize');
+const { formatShipmentDates } = require('../utils/dateFormatter');
 
 // CREATE - POST /shipments
 exports.create = async (req, res, next) => {
@@ -42,7 +43,7 @@ exports.create = async (req, res, next) => {
     res.status(201).json({ 
       success: true,
       message: 'Shipment created successfully',
-      data: { shipment: shipmentWithCustomer }
+      data: { shipment: formatShipmentDates(shipmentWithCustomer) }
     });
   } catch (e) { next(e); }
 };
@@ -66,7 +67,7 @@ exports.mineCustomer = async (req, res, next) => {
     
     res.json({ 
       success: true,
-      data: { shipments }
+      data: { shipments: shipments.map(s => formatShipmentDates(s)) }
     });
   } catch (e) { next(e); }
 };
@@ -90,7 +91,7 @@ exports.availableForTruckers = async (req, res, next) => {
     
     res.json({ 
       success: true,
-      data: { shipments }
+      data: { shipments: shipments.map(s => formatShipmentDates(s)) }
     });
   } catch (e) { next(e); }
 };
@@ -128,7 +129,7 @@ exports.accept = async (req, res, next) => {
     res.json({ 
       success: true,
       message: 'Shipment accepted successfully',
-      data: { shipment: updated }
+      data: { shipment: formatShipmentDates(updated) }
     });
   } catch (e) { next(e); }
 };
@@ -160,7 +161,7 @@ exports.updateStatus = async (req, res, next) => {
     res.json({ 
       success: true,
       message: `Shipment status updated to ${status}`,
-      data: { shipment: updated }
+      data: { shipment: formatShipmentDates(updated) }
     });
   } catch (e) { next(e); }
 };
@@ -202,7 +203,7 @@ exports.mineTrucker = async (req, res, next) => {
 
     // Format response with current location
     const formattedShipments = shipments.map(shipment => {
-      const shipmentData = shipment.toJSON();
+      const shipmentData = formatShipmentDates(shipment);
       const currentLocation = shipmentData.Locations && shipmentData.Locations.length > 0 
         ? {
             id: shipmentData.Locations[0].id,
@@ -249,7 +250,7 @@ exports.cancelByCustomer = async (req, res, next) => {
     res.json({ 
       success: true,
       message: 'Shipment cancelled successfully',
-      data: { shipment: updated }
+      data: { shipment: formatShipmentDates(updated) }
     });
   } catch (e) { next(e); }
 };
@@ -282,7 +283,7 @@ exports.getById = async (req, res, next) => {
     
     res.json({ 
       success: true,
-      data: { shipment }
+      data: { shipment: formatShipmentDates(shipment) }
     });
   } catch (e) { next(e); }
 };
@@ -312,7 +313,7 @@ exports.update = async (req, res, next) => {
     res.json({ 
       success: true,
       message: 'Shipment updated successfully',
-      data: { shipment: updated }
+      data: { shipment: formatShipmentDates(updated) }
     });
   } catch (e) { next(e); }
 };
@@ -357,7 +358,7 @@ exports.getAll = async (req, res, next) => {
     
     res.json({ 
       success: true,
-      data: { shipments }
+      data: { shipments: shipments.map(s => formatShipmentDates(s)) }
     });
   } catch (e) { next(e); }
 };

@@ -1,5 +1,6 @@
 const { User, Shipment, Vehicle } = require('../../models/index');
 const { updateShipmentSchema } = require('../validation/shipments.schema');
+const { formatShipmentDates } = require('../utils/dateFormatter');
 
 exports.listUsers = async (_req, res, next) => {
   try {
@@ -20,7 +21,7 @@ exports.approveTrucker = async (req, res, next) => {
 exports.listShipments = async (_req, res, next) => {
   try {
     const shipments = await Shipment.findAll({ order: [['createdAt','DESC']] });
-    res.json({ shipments });
+    res.json({ shipments: shipments.map(s => formatShipmentDates(s)) });
   } catch (e) { next(e); }
 };
 
@@ -48,7 +49,7 @@ exports.updateShipment = async (req, res, next) => {
     res.json({ 
       success: true,
       message: 'Shipment updated successfully by admin',
-      data: { shipment: updated }
+      data: { shipment: formatShipmentDates(updated) }
     });
   } catch (e) { next(e); }
 };
