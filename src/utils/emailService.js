@@ -458,9 +458,281 @@ Cargo360 Admin Panel: ${process.env.ADMIN_URL || 'https://admin.cargo360pk.com'}
   }
 };
 
+// Send shipment confirmation notification to team
+const sendShipmentConfirmationNotification = async (shipment, customer) => {
+  const transporter = createTransporter();
+  const { SHIPMENT_NOTIFICATION_EMAILS } = require('./constants');
+  
+  const mailOptions = {
+    from: {
+      name: 'Cargo360 System',
+      address: process.env.EMAIL_FROM || process.env.EMAIL_USER
+    },
+    to: SHIPMENT_NOTIFICATION_EMAILS.join(', '),
+    replyTo: customer.email,
+    subject: `✅ Shipment Confirmed C360-PK-${shipment.id} - ${customer.email}`,
+    // Plain text version
+    text: `Shipment Confirmed by Customer - ID C360-PK-${shipment.id}
+
+🎉 CUSTOMER HAS CONFIRMED THE SHIPMENT 🎉
+
+Customer Details:
+- Name: ${customer.name}
+- Email: ${customer.email}
+- Company: ${customer.company || 'N/A'}
+- Phone: ${customer.phone || 'N/A'}
+
+Shipment Details:
+- Shipment ID: C360-PK-${shipment.id}
+- Status: CONFIRMED ✅
+- Vehicle Type: ${shipment.vehicleType}
+- Number of Vehicles: ${shipment.numberOfVehicles || 'N/A'}
+
+Route Information:
+- Pickup Location: ${shipment.pickupLocation}
+- Drop Location: ${shipment.dropLocation}
+- Delivery Date: ${shipment.deliveryDate || 'Not specified'}
+
+Cargo Details:
+- Cargo Type: ${shipment.cargoType}
+- Cargo Weight: ${shipment.cargoWeight ? shipment.cargoWeight + ' kg' : 'N/A'}
+- Cargo Size: ${shipment.cargoSize || 'N/A'}
+- Description: ${shipment.description || 'N/A'}
+
+Financial Details:
+- Budget: ${shipment.budget ? 'PKR ' + shipment.budget : 'N/A'}
+- Insurance: ${shipment.insurance ? 'Yes' : 'No'}
+- Sales Tax: ${shipment.salesTax ? 'Yes' : 'No'}
+
+Confirmed At: ${new Date().toLocaleString('en-PK', { timeZone: 'Asia/Karachi' })}
+
+---
+Cargo360 Admin Panel: ${process.env.ADMIN_URL || 'https://admin.cargo360pk.com'}/order/${shipment.id}`,
+    // HTML version
+    html: `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Shipment Confirmed</title>
+      </head>
+      <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
+        <table role="presentation" style="width: 100%; border-collapse: collapse;">
+          <tr>
+            <td align="center" style="padding: 40px 0;">
+              <table role="presentation" style="width: 700px; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <tr>
+                  <td style="padding: 30px; background-color: #28a745; border-radius: 8px 8px 0 0;">
+                    <h1 style="color: #ffffff; margin: 0; font-size: 28px;">✅ Shipment Confirmed by Customer!</h1>
+                    <p style="color: #d4edda; margin: 10px 0 0 0; font-size: 16px;">Shipment ID: C360-PK-${shipment.id}</p>
+                  </td>
+                </tr>
+                
+                <!-- Alert Box -->
+                <tr>
+                  <td style="padding: 20px 30px;">
+                    <div style="background-color: #d4edda; border: 2px solid #28a745; border-radius: 8px; padding: 20px; text-align: center;">
+                      <p style="color: #155724; font-size: 18px; font-weight: bold; margin: 0;">🎉 Customer has confirmed and accepted the budget for this shipment!</p>
+                    </div>
+                  </td>
+                </tr>
+                
+                <!-- Customer Details -->
+                <tr>
+                  <td style="padding: 30px;">
+                    <h2 style="color: #333; margin: 0 0 15px 0; font-size: 20px; border-bottom: 2px solid #28a745; padding-bottom: 10px;">👤 Customer Details</h2>
+                    <table style="width: 100%; border-collapse: collapse;">
+                      <tr>
+                        <td style="padding: 8px 0; color: #555; font-weight: bold; width: 40%;">Name:</td>
+                        <td style="padding: 8px 0; color: #333;">${customer.name}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 8px 0; color: #555; font-weight: bold;">Email:</td>
+                        <td style="padding: 8px 0; color: #007bff;"><a href="mailto:${customer.email}" style="color: #007bff; text-decoration: none;">${customer.email}</a></td>
+                      </tr>
+                      ${customer.phone ? `
+                      <tr>
+                        <td style="padding: 8px 0; color: #555; font-weight: bold;">Phone:</td>
+                        <td style="padding: 8px 0; color: #333;"><a href="tel:${customer.phone}" style="color: #333; text-decoration: none;">${customer.phone}</a></td>
+                      </tr>
+                      ` : ''}
+                      ${customer.company ? `
+                      <tr>
+                        <td style="padding: 8px 0; color: #555; font-weight: bold;">Company:</td>
+                        <td style="padding: 8px 0; color: #333;">${customer.company}</td>
+                      </tr>
+                      ` : ''}
+                    </table>
+                  </td>
+                </tr>
+                
+                <!-- Shipment Summary -->
+                <tr>
+                  <td style="padding: 0 30px 30px 30px;">
+                    <h2 style="color: #333; margin: 0 0 15px 0; font-size: 20px; border-bottom: 2px solid #28a745; padding-bottom: 10px;">📦 Shipment Summary</h2>
+                    <table style="width: 100%; border-collapse: collapse;">
+                      <tr>
+                        <td style="padding: 8px 0; color: #555; font-weight: bold; width: 40%;">Status:</td>
+                        <td style="padding: 8px 0;">
+                          <span style="background-color: #28a745; color: #fff; padding: 6px 16px; border-radius: 4px; font-weight: bold; text-transform: uppercase; font-size: 12px;">
+                            ✅ CONFIRMED
+                          </span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 8px 0; color: #555; font-weight: bold;">Vehicle Type:</td>
+                        <td style="padding: 8px 0; color: #333; text-transform: capitalize;">${shipment.vehicleType}</td>
+                      </tr>
+                      ${shipment.numberOfVehicles ? `
+                      <tr>
+                        <td style="padding: 8px 0; color: #555; font-weight: bold;">Number of Vehicles:</td>
+                        <td style="padding: 8px 0; color: #333;">${shipment.numberOfVehicles}</td>
+                      </tr>
+                      ` : ''}
+                    </table>
+                  </td>
+                </tr>
+                
+                <!-- Route Information -->
+                <tr>
+                  <td style="padding: 0 30px 30px 30px;">
+                    <h2 style="color: #333; margin: 0 0 15px 0; font-size: 20px; border-bottom: 2px solid #17a2b8; padding-bottom: 10px;">🗺️ Route Information</h2>
+                    <table style="width: 100%; border-collapse: collapse;">
+                      <tr>
+                        <td style="padding: 8px 0; color: #555; font-weight: bold; width: 40%;">Pickup Location:</td>
+                        <td style="padding: 8px 0; color: #333;">${shipment.pickupLocation}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 8px 0; color: #555; font-weight: bold;">Drop Location:</td>
+                        <td style="padding: 8px 0; color: #333;">${shipment.dropLocation}</td>
+                      </tr>
+                      ${shipment.deliveryDate ? `
+                      <tr>
+                        <td style="padding: 8px 0; color: #555; font-weight: bold;">Delivery Date:</td>
+                        <td style="padding: 8px 0; color: #dc3545; font-weight: bold;">${shipment.deliveryDate}</td>
+                      </tr>
+                      ` : ''}
+                    </table>
+                  </td>
+                </tr>
+                
+                <!-- Cargo Details -->
+                <tr>
+                  <td style="padding: 0 30px 30px 30px;">
+                    <h2 style="color: #333; margin: 0 0 15px 0; font-size: 20px; border-bottom: 2px solid #6f42c1; padding-bottom: 10px;">📦 Cargo Details</h2>
+                    <table style="width: 100%; border-collapse: collapse;">
+                      <tr>
+                        <td style="padding: 8px 0; color: #555; font-weight: bold; width: 40%;">Cargo Type:</td>
+                        <td style="padding: 8px 0; color: #333;">${shipment.cargoType}</td>
+                      </tr>
+                      ${shipment.cargoWeight ? `
+                      <tr>
+                        <td style="padding: 8px 0; color: #555; font-weight: bold;">Cargo Weight:</td>
+                        <td style="padding: 8px 0; color: #333;">${shipment.cargoWeight} kg</td>
+                      </tr>
+                      ` : ''}
+                      ${shipment.cargoSize ? `
+                      <tr>
+                        <td style="padding: 8px 0; color: #555; font-weight: bold;">Cargo Size:</td>
+                        <td style="padding: 8px 0; color: #333;">${shipment.cargoSize}</td>
+                      </tr>
+                      ` : ''}
+                      ${shipment.description ? `
+                      <tr>
+                        <td style="padding: 8px 0; color: #555; font-weight: bold; vertical-align: top;">Description:</td>
+                        <td style="padding: 8px 0; color: #333;">${shipment.description}</td>
+                      </tr>
+                      ` : ''}
+                    </table>
+                  </td>
+                </tr>
+                
+                <!-- Financial Details -->
+                <tr>
+                  <td style="padding: 0 30px 30px 30px;">
+                    <h2 style="color: #333; margin: 0 0 15px 0; font-size: 20px; border-bottom: 2px solid #28a745; padding-bottom: 10px;">💰 Confirmed Financial Details</h2>
+                    <table style="width: 100%; border-collapse: collapse; background-color: #f8f9fa; padding: 15px; border-radius: 8px;">
+                      ${shipment.budget ? `
+                      <tr>
+                        <td style="padding: 12px 15px; color: #555; font-weight: bold; width: 40%;">Agreed Budget:</td>
+                        <td style="padding: 12px 15px; color: #28a745; font-weight: bold; font-size: 22px;">PKR ${Number(shipment.budget).toLocaleString('en-PK')}</td>
+                      </tr>
+                      ` : ''}
+                      <tr>
+                        <td style="padding: 8px 15px; color: #555; font-weight: bold;">Insurance:</td>
+                        <td style="padding: 8px 15px; color: #333;">${shipment.insurance ? '✅ Yes' : '❌ No'}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 8px 15px; color: #555; font-weight: bold;">Sales Tax:</td>
+                        <td style="padding: 8px 15px; color: #333;">${shipment.salesTax ? '✅ Yes' : '❌ No'}</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                
+                <!-- Metadata -->
+                <tr>
+                  <td style="padding: 0 30px 30px 30px;">
+                    <p style="color: #777; font-size: 14px; margin: 0;">
+                      <strong>Confirmed At:</strong> ${new Date().toLocaleString('en-PK', { 
+                        timeZone: 'Asia/Karachi',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: true
+                      })}
+                    </p>
+                  </td>
+                </tr>
+                
+                <!-- Action Button -->
+                <tr>
+                  <td align="center" style="padding: 0 30px 30px 30px;">
+                    <a href="${process.env.ADMIN_URL || 'https://admin.cargo360pk.com'}/order/${shipment.id}" 
+                       style="display: inline-block; background-color: #28a745; color: #ffffff; padding: 14px 40px; text-decoration: none; border-radius: 5px; font-size: 16px; font-weight: bold;">
+                      View Confirmed Shipment
+                    </a>
+                  </td>
+                </tr>
+                
+                <tr>
+                  <td style="padding: 20px 30px; background-color: #f8f9fa; border-radius: 0 0 8px 8px;">
+                    <p style="color: #999; font-size: 12px; line-height: 1.6; margin: 0; text-align: center;">
+                      Customer has confirmed their acceptance of the budget and terms<br>
+                      Reply to this email will go to: ${customer.email}
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `,
+    headers: {
+      'X-Mailer': 'Cargo360 Notification Service',
+      'X-Priority': '1',
+      'Importance': 'high'
+    }
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`Shipment confirmation notification sent for #${shipment.id} to team`);
+  } catch (error) {
+    console.error('Error sending shipment confirmation notification:', error);
+    // Don't throw error - we don't want to fail confirmation if email fails
+  }
+};
+
 module.exports = {
   generateToken,
   sendVerificationEmail,
   sendPasswordResetEmail,
-  sendShipmentNotification
+  sendShipmentNotification,
+  sendShipmentConfirmationNotification
 };

@@ -67,7 +67,7 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: false
     },
     status: {
-      type: DataTypes.ENUM('pending','accepted','picked_up','in_transit','delivered','cancelled'),
+      type: DataTypes.ENUM('pending','confirmed','accepted','picked_up','in_transit','delivered','cancelled'),
       defaultValue: 'pending'
     },
     deliveryDate: {

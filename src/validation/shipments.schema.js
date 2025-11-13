@@ -34,7 +34,7 @@ exports.updateShipmentSchema = Joi.object({
 
 // Status update validation (for truckers)
 exports.updateStatusSchema = Joi.object({
-  status: Joi.string().valid('picked_up', 'accepted', 'in_transit', 'delivered', 'cancelled').required()
+  status: Joi.string().valid('picked_up', 'confirmed', 'accepted', 'in_transit', 'delivered', 'cancelled').required()
 });
 
 // Assignment validation (for admin)
@@ -50,6 +50,6 @@ exports.assignDriverByBrokerSchema = Joi.object({
 
 // Query parameters validation
 exports.queryShipmentsSchema = Joi.object({
-  status: Joi.string().valid('pending', 'accepted', 'picked_up', 'in_transit', 'delivered', 'cancelled').optional(),
+  status: Joi.string().valid('pending', 'confirmed', 'accepted', 'picked_up', 'in_transit', 'delivered', 'cancelled').optional(),
   vehicleType: Joi.string().optional()
 });

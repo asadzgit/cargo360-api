@@ -15,6 +15,7 @@ router.post('/', auth, requireRole('customer'), ctrl.create);
 router.get('/mine', auth, requireRole('customer'), ctrl.mineCustomer);
 router.put('/:id', auth, requireRole('customer'), ctrl.update);
 router.patch('/:id/cancel', auth, requireRole('customer'), ctrl.cancelByCustomer);
+router.patch('/:id/confirm', auth, requireRole('customer'), ctrl.confirmByCustomer);
 router.post('/:id/discount-request', auth, requireRole('customer'), discountRequestsCtrl.createForShipment);
 
 // Trucker routes

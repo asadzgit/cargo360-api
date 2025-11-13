@@ -29,7 +29,7 @@ exports.create = async (req, res, next) => {
     
     // Include customer info in response
     const shipmentWithCustomer = await Shipment.findByPk(shipment.id, {
-      include: [{ model: User, as: 'Customer', attributes: ['id', 'name', 'company', 'email'] }]
+      include: [{ model: User, as: 'Customer', attributes: ['id', 'name', 'company', 'email', 'phone'] }]
     });
     
     // Send notification emails to team (non-blocking)
@@ -251,6 +251,40 @@ exports.cancelByCustomer = async (req, res, next) => {
       success: true,
       message: 'Shipment cancelled successfully',
       data: { shipment: formatShipmentDates(updated) }
+    });
+  } catch (e) { next(e); }
+};
+
+// UPDATE - PATCH /shipments/:id/confirm (Customer confirms shipment)
+exports.confirmByCustomer = async (req, res, next) => {
+  try {
+    const shipment = await Shipment.findOne({
+      where: { id: req.params.id, customerId: req.user.id, status: 'pending' }
+    });
+    
+    if (!shipment) {
+      return next(Object.assign(new Error('Cannot confirm shipment. It may not exist, not yours, or already confirmed.'), { status: 400 }));
+    }
+    
+    await shipment.update({ status: 'confirmed' });
+    
+    const updated = await Shipment.findByPk(shipment.id, {
+      include: [{ model: User, as: 'Customer', attributes: ['id', 'name', 'company', 'email', 'phone'] }]
+    });
+    
+    // Send notification emails to team (non-blocking)
+    try {
+      const { sendShipmentConfirmationNotification } = require('../utils/emailService');
+      await sendShipmentConfirmationNotification(updated.toJSON(), updated.Customer.toJSON());
+    } catch (emailError) {
+      console.error('Failed to send shipment confirmation notification email:', emailError);
+      // Don't fail the request if email fails
+    }
+    
+    res.json({ 
+      success: true,
+      message: 'Shipment confirmed successfully',
+      data: { shipment: updated }
     });
   } catch (e) { next(e); }
 };
