@@ -23,6 +23,7 @@ exports.createForShipment = async (req, res, next) => {
 // PATCH /discount-requests/:id (admin-only)
 exports.decide = async (req, res, next) => {
   const id = parseInt(req.params.id, 10);
+  const actingUserId = req.user?.id ?? -1;
   try {
     const { action } = await decideDiscountRequestSchema.validateAsync(req.body);
 
@@ -38,7 +39,7 @@ exports.decide = async (req, res, next) => {
         // Update shipment budget to requestAmount
         const shipment = await Shipment.findByPk(dr.shipmentId, { transaction: t });
         if (!shipment) throw Object.assign(new Error('Related shipment not found'), { status: 404 });
-        await shipment.update({ budget: dr.requestAmount }, { transaction: t });
+        await shipment.update({ budget: dr.requestAmount }, { transaction: t, userId: actingUserId });
         await dr.update({ status: 'accepted' }, { transaction: t });
       } else if (action === 'reject') {
         await dr.update({ status: 'rejected' }, { transaction: t });

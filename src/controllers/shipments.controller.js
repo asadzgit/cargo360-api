@@ -6,7 +6,7 @@ const {
   queryShipmentsSchema,
   assignmentSchema 
 } = require('../validation/shipments.schema');
-const { sendShipmentNotification } = require('../utils/emailService');
+const { sendShipmentNotification, sendShipmentConfirmationNotification } = require('../utils/emailService');
 const { Op } = require('sequelize');
 const { formatShipmentDates } = require('../utils/dateFormatter');
 
@@ -25,7 +25,7 @@ exports.create = async (req, res, next) => {
       ...data,
       customerId: req.user.id,
       status: 'pending'
-    });
+    }, { userId: req.user.id });
     
     // Include customer info in response
     const shipmentWithCustomer = await Shipment.findByPk(shipment.id, {
@@ -110,7 +110,7 @@ exports.accept = async (req, res, next) => {
     await sequelize.transaction(async (t) => {
       const [count] = await Shipment.update(
         { status: 'accepted', truckerId },
-        { where: { id: shipmentId, status: 'pending' }, transaction: t }
+        { where: { id: shipmentId, status: 'pending' }, transaction: t, individualHooks: true, userId: req.user.id }
       );
 
       if (count === 0) {
@@ -148,7 +148,7 @@ exports.updateStatus = async (req, res, next) => {
       return next(Object.assign(new Error('Shipment not found or unauthorized'), { status: 404 }));
     }
     
-    await shipment.update({ status });
+    await shipment.update({ status }, { userId: req.user.id });
     
     const updated = await Shipment.findByPk(shipment.id, {
       include: [
@@ -241,7 +241,7 @@ exports.cancelByCustomer = async (req, res, next) => {
       return next(Object.assign(new Error('Cannot cancel shipment. It may not exist or already accepted.'), { status: 400 }));
     }
     
-    await shipment.update({ status: 'cancelled' });
+    await shipment.update({ status: 'cancelled' }, { userId: req.user.id });
     
     const updated = await Shipment.findByPk(shipment.id, {
       include: [{ model: User, as: 'Customer', attributes: ['id', 'name', 'company', 'phone'] }]
@@ -266,7 +266,7 @@ exports.confirmByCustomer = async (req, res, next) => {
       return next(Object.assign(new Error('Cannot confirm shipment. It may not exist, not yours, or already confirmed.'), { status: 400 }));
     }
     
-    await shipment.update({ status: 'confirmed' });
+    await shipment.update({ status: 'confirmed' }, { userId: req.user.id });
     
     const updated = await Shipment.findByPk(shipment.id, {
       include: [{ model: User, as: 'Customer', attributes: ['id', 'name', 'company', 'email', 'phone'] }]
@@ -274,7 +274,6 @@ exports.confirmByCustomer = async (req, res, next) => {
     
     // Send notification emails to team (non-blocking)
     try {
-      const { sendShipmentConfirmationNotification } = require('../utils/emailService');
       await sendShipmentConfirmationNotification(updated.toJSON(), updated.Customer.toJSON());
     } catch (emailError) {
       console.error('Failed to send shipment confirmation notification email:', emailError);
@@ -284,7 +283,7 @@ exports.confirmByCustomer = async (req, res, next) => {
     res.json({ 
       success: true,
       message: 'Shipment confirmed successfully',
-      data: { shipment: updated }
+      data: { shipment: formatShipmentDates(updated) }
     });
   } catch (e) { next(e); }
 };
@@ -335,7 +334,7 @@ exports.update = async (req, res, next) => {
       return next(Object.assign(new Error('Cannot update shipment. It may not exist, not yours, or already accepted.'), { status: 400 }));
     }
     
-    await shipment.update(data);
+    await shipment.update(data, { userId: req.user.id });
     
     const updated = await Shipment.findByPk(shipment.id, {
       include: [
@@ -361,7 +360,7 @@ exports.delete = async (req, res, next) => {
       return next(Object.assign(new Error('Shipment not found'), { status: 404 }));
     }
     
-    await shipment.update({ status: 'cancelled' });
+    await shipment.update({ status: 'cancelled' }, { userId: req.user.id });
     
     res.json({ 
       success: true,

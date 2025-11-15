@@ -36,7 +36,7 @@ exports.updateShipment = async (req, res, next) => {
       return next(Object.assign(new Error('Shipment not found'), { status: 404 }));
     }
     
-    await shipment.update(data);
+    await shipment.update(data, { userId: req.user.id });
     
     const updated = await Shipment.findByPk(shipment.id, {
       include: [

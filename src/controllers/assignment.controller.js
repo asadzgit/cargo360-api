@@ -49,7 +49,7 @@ exports.assign = async (req, res, next) => {
       updateData.status = 'accepted';
     }
     
-    await shipment.update(updateData);
+    await shipment.update(updateData, { userId: req.user.id });
     
     // Fetch updated shipment with associations
     const updatedShipment = await Shipment.findByPk(shipmentId, {
@@ -100,7 +100,7 @@ exports.assignDriverByBroker = async (req, res, next) => {
     // Update status to accepted if pending
     if (shipment.status === 'pending') updateData.status = 'accepted';
 
-    await shipment.update(updateData);
+    await shipment.update(updateData, { userId: req.user.id });
 
     const updatedShipment = await Shipment.findByPk(shipmentId, {
       include: [
@@ -113,7 +113,7 @@ exports.assignDriverByBroker = async (req, res, next) => {
     res.json({
       success: true,
       message: 'Driver assigned to shipment successfully',
-      data: { shipment: updatedShipment }
+      data: { shipment: formatShipmentDates(updatedShipment) }
     });
   } catch (e) { next(e); }
 };
