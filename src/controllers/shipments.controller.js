@@ -1,4 +1,4 @@
-const { Shipment, User, ShipmentLocation, DiscountRequest, sequelize } = require('../../models/index');
+const { Shipment, User, ShipmentLocation, DiscountRequest, ShipmentLog, sequelize } = require('../../models/index');
 const { 
   createShipmentSchema, 
   updateShipmentSchema, 
@@ -317,6 +317,41 @@ exports.getById = async (req, res, next) => {
     res.json({ 
       success: true,
       data: { shipment: formatShipmentDates(shipment) }
+    });
+  } catch (e) { next(e); }
+};
+
+// READ - GET /shipments/:id/logs (Get audit logs for single shipment)
+exports.getLogs = async (req, res, next) => {
+  try {
+    const shipment = await Shipment.findByPk(req.params.id);
+    if (!shipment) {
+      return next(Object.assign(new Error('Shipment not found'), { status: 404 }));
+    }
+
+    const isAuthorized = 
+      req.user.role === 'admin' ||
+      shipment.customerId === req.user.id ||
+      shipment.truckerId === req.user.id ||
+      shipment.driverId === req.user.id;
+
+    if (!isAuthorized) {
+      return next(Object.assign(new Error('Unauthorized to view this shipment'), { status: 403 }));
+    }
+
+    const limit = Math.min(parseInt(req.query.limit || '100', 10) || 100, 500);
+    const logs = await ShipmentLog.findAll({
+      where: { shipmentId: shipment.id },
+      order: [['createdAt', 'DESC']],
+      limit
+    });
+
+    res.json({
+      success: true,
+      data: {
+        shipmentId: shipment.id,
+        logs
+      }
     });
   } catch (e) { next(e); }
 };

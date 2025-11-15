@@ -34,6 +34,7 @@ router.get('/mine-driver', auth, requireRole('driver'), ctrl.mineTrucker);
 router.patch('/:id/assign-driver', auth, requireRole('trucker'), assignmentCtrl.assignDriverByBroker);
 
 // Shared routes (customer, trucker, driver, admin can view)
+router.get('/:id/logs', auth, ctrl.getLogs);
 router.get('/:id', auth, ctrl.getById);
 
 module.exports = router;
