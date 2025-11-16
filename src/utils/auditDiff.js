@@ -25,6 +25,7 @@ const formatFieldName = (fieldName) => {
     'cancelReason': 'Cancel Reason',
     'cancelledBy': 'Cancelled By',
     'salesTax': 'Sales Tax',
+    'budget': 'Budget',
     'isApproved': 'Is Approved',
     'isEmailVerified': 'Is Email Verified',
     'isPhoneVerified': 'Is Phone Verified'
@@ -42,9 +43,42 @@ const formatFieldName = (fieldName) => {
     .trim();
 };
 
+/**
+ * Normalizes numeric values for comparison (handles DECIMAL strings vs numbers)
+ * @param {any} value - Value to normalize
+ * @returns {any} Normalized value
+ */
+const normalizeNumericValue = (value) => {
+  // Handle Sequelize Decimal objects
+  if (value && typeof value === 'object' && value.constructor && value.constructor.name === 'Decimal') {
+    return parseFloat(value.toString());
+  }
+  
+  // Handle null/undefined
+  if (value === null || value === undefined) {
+    return null;
+  }
+  
+  // Convert numeric strings to numbers for comparison
+  if (typeof value === 'string' && value.trim() !== '' && !isNaN(Number(value)) && isFinite(value)) {
+    const num = Number(value);
+    // Only convert if it's a valid number representation
+    if (String(num) === value.trim() || String(parseFloat(value)) === parseFloat(value).toString()) {
+      return num;
+    }
+  }
+  
+  return value;
+};
+
 const serializeValue = (value) => {
   if (value instanceof Date) {
     return value.toISOString();
+  }
+
+  // Handle Sequelize Decimal objects
+  if (value && typeof value === 'object' && value.constructor && value.constructor.name === 'Decimal') {
+    return parseFloat(value.toString());
   }
 
   if (value && typeof value === 'object') {
@@ -59,8 +93,17 @@ const serializeValue = (value) => {
 };
 
 const valuesAreEqual = (a, b) => {
-  const serializedA = serializeValue(a);
-  const serializedB = serializeValue(b);
+  // Normalize numeric values first (handles DECIMAL string vs number comparison)
+  const normalizedA = normalizeNumericValue(a);
+  const normalizedB = normalizeNumericValue(b);
+  
+  // If both are numbers after normalization, compare numerically
+  if (typeof normalizedA === 'number' && typeof normalizedB === 'number') {
+    return normalizedA === normalizedB;
+  }
+  
+  const serializedA = serializeValue(normalizedA);
+  const serializedB = serializeValue(normalizedB);
 
   if (typeof serializedA === 'object' && typeof serializedB === 'object') {
     return JSON.stringify(serializedA) === JSON.stringify(serializedB);
