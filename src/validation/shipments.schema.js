@@ -53,3 +53,9 @@ exports.queryShipmentsSchema = Joi.object({
   status: Joi.string().valid('pending', 'confirmed', 'accepted', 'picked_up', 'in_transit', 'delivered', 'cancelled').optional(),
   vehicleType: Joi.string().optional()
 });
+
+// Cancel shipment validation
+exports.cancelShipmentSchema = Joi.object({
+  cancelReason: Joi.string().max(1000).optional().allow('', null),
+  cancelledBy: Joi.string().valid('Customer', 'Super Admin').optional()
+});

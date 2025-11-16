@@ -4,7 +4,8 @@ const {
   updateShipmentSchema, 
   updateStatusSchema, 
   queryShipmentsSchema,
-  assignmentSchema 
+  assignmentSchema,
+  cancelShipmentSchema
 } = require('../validation/shipments.schema');
 const { sendShipmentNotification, sendShipmentConfirmationNotification } = require('../utils/emailService');
 const { Op } = require('sequelize');
@@ -233,6 +234,7 @@ exports.mineTrucker = async (req, res, next) => {
 // UPDATE - PATCH /shipments/:id/cancel (Customer cancels shipment)
 exports.cancelByCustomer = async (req, res, next) => {
   try {
+    const { cancelReason, cancelledBy } = await cancelShipmentSchema.validateAsync(req.body || {}, { stripUnknown: true });
     const shipment = await Shipment.findOne({
       where: { id: req.params.id, customerId: req.user.id, status: 'pending' }
     });
@@ -241,7 +243,11 @@ exports.cancelByCustomer = async (req, res, next) => {
       return next(Object.assign(new Error('Cannot cancel shipment. It may not exist or already accepted.'), { status: 400 }));
     }
     
-    await shipment.update({ status: 'cancelled' }, { userId: req.user.id });
+    await shipment.update({ 
+      status: 'cancelled',
+      cancelReason: cancelReason ?? shipment.cancelReason,
+      cancelledBy: cancelledBy || 'Customer'
+    }, { userId: req.user.id });
     
     const updated = await Shipment.findByPk(shipment.id, {
       include: [{ model: User, as: 'Customer', attributes: ['id', 'name', 'company', 'phone'] }]
@@ -395,7 +401,13 @@ exports.delete = async (req, res, next) => {
       return next(Object.assign(new Error('Shipment not found'), { status: 404 }));
     }
     
-    await shipment.update({ status: 'cancelled' }, { userId: req.user.id });
+  await shipment.update({ 
+    status: 'cancelled',
+    cancelReason: typeof req.body?.cancelReason === 'string' && req.body.cancelReason.trim() !== ''
+      ? req.body.cancelReason.trim()
+      : shipment.cancelReason,
+    cancelledBy: 'Super Admin'
+  }, { userId: req.user.id });
     
     res.json({ 
       success: true,

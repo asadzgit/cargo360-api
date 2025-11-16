@@ -1,3 +1,47 @@
+/**
+ * Converts camelCase field names to human-readable Title Case format
+ * @param {string} fieldName - Field name in camelCase (e.g., "dropLocation")
+ * @returns {string} Human-readable name (e.g., "Drop Location")
+ */
+const formatFieldName = (fieldName) => {
+  if (!fieldName || typeof fieldName !== 'string') {
+    return fieldName;
+  }
+
+  // Handle special cases
+  const specialCases = {
+    'id': 'ID',
+    'customerId': 'Customer ID',
+    'truckerId': 'Trucker ID',
+    'driverId': 'Driver ID',
+    'cargoType': 'Cargo Type',
+    'cargoWeight': 'Cargo Weight',
+    'cargoSize': 'Cargo Size',
+    'vehicleType': 'Vehicle Type',
+    'numberOfVehicles': 'Number Of Vehicles',
+    'pickupLocation': 'Pickup Location',
+    'dropLocation': 'Drop Location',
+    'deliveryDate': 'Delivery Date',
+    'cancelReason': 'Cancel Reason',
+    'cancelledBy': 'Cancelled By',
+    'salesTax': 'Sales Tax',
+    'isApproved': 'Is Approved',
+    'isEmailVerified': 'Is Email Verified',
+    'isPhoneVerified': 'Is Phone Verified'
+  };
+
+  if (specialCases[fieldName]) {
+    return specialCases[fieldName];
+  }
+
+  // Convert camelCase to Title Case
+  // Insert space before capital letters and capitalize first letter
+  return fieldName
+    .replace(/([A-Z])/g, ' $1') // Add space before capital letters
+    .replace(/^./, (str) => str.toUpperCase()) // Capitalize first letter
+    .trim();
+};
+
 const serializeValue = (value) => {
   if (value instanceof Date) {
     return value.toISOString();
@@ -50,7 +94,9 @@ const buildDiff = (previous = {}, current = {}, options = {}) => {
       return acc;
     }
 
-    acc[field] = {
+    // Use human-readable field name as key
+    const readableFieldName = formatFieldName(field);
+    acc[readableFieldName] = {
       old: serializeValue(prevValue),
       new: serializeValue(currValue)
     };
@@ -61,6 +107,7 @@ const buildDiff = (previous = {}, current = {}, options = {}) => {
 
 module.exports = {
   buildDiff,
-  serializeValue
+  serializeValue,
+  formatFieldName
 };
 

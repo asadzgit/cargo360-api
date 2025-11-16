@@ -1,6 +1,6 @@
 'use strict';
 const { Model } = require('sequelize');
-const { buildDiff } = require('../src/utils/auditDiff');
+const { buildDiff, formatFieldName } = require('../src/utils/auditDiff');
 
 const AUDIT_IGNORED_FIELDS = ['updatedAt', 'createdAt'];
 const SYSTEM_USER_ID = -1;
@@ -16,13 +16,24 @@ const resolveUserId = (options = {}) => {
 
 const getPlainSnapshot = (shipment) => {
   if (!shipment) return null;
+  
+  let plainData;
   if (typeof shipment.get === 'function') {
-    return shipment.get({ plain: true });
+    plainData = shipment.get({ plain: true });
+  } else if (typeof shipment.toJSON === 'function') {
+    plainData = shipment.toJSON();
+  } else {
+    plainData = { ...shipment };
   }
-  if (typeof shipment.toJSON === 'function') {
-    return shipment.toJSON();
+
+  // Format field names to human-readable format
+  const formatted = {};
+  for (const [key, value] of Object.entries(plainData)) {
+    if (AUDIT_IGNORED_FIELDS.includes(key)) continue;
+    formatted[formatFieldName(key)] = value;
   }
-  return { ...shipment };
+  
+  return formatted;
 };
 
 const logAuditEntry = async (shipment, options, operation, diff) => {
@@ -107,6 +118,14 @@ module.exports = (sequelize, DataTypes) => {
     status: {
       type: DataTypes.ENUM('pending','confirmed','accepted','picked_up','in_transit','delivered','cancelled'),
       defaultValue: 'pending'
+    },
+    cancelReason: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+    cancelledBy: {
+      type: DataTypes.STRING,
+      allowNull: true
     },
     deliveryDate: {
       type: DataTypes.DATEONLY,
