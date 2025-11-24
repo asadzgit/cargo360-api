@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const { Op } = require('sequelize');
 const { updateMeSchema } = require('../validation/profile.schema');
 const { User } = require('../../models');
+const { sendUserNotification } = require('../helpers/notify');
 
 // PATCH /users/me
 exports.updateMe = async (req, res, next) => {
@@ -38,6 +39,22 @@ exports.updateMe = async (req, res, next) => {
       isApproved: user.isApproved,
       isEmailVerified: user.isEmailVerified
     };
+
+    // Send push notification about profile update (non-blocking)
+    try {
+      await sendUserNotification(
+        user.id,
+        "Profile Updated",
+        "Your profile has been updated successfully.",
+        {
+          type: 'profile_updated',
+          userId: user.id
+        }
+      );
+    } catch (notificationError) {
+      console.error('Failed to send profile update notification:', notificationError);
+      // Don't fail the request if notification fails
+    }
 
     res.json({ success: true, message: 'Profile updated successfully', user: result });
   } catch (e) {
