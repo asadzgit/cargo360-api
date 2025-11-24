@@ -130,6 +130,10 @@ module.exports = (sequelize, DataTypes) => {
     deliveryDate: {
       type: DataTypes.DATEONLY,
       allowNull: true
+    },
+    clearingAgentNum: {
+      type: DataTypes.STRING,
+      allowNull: true
     }
   }, {
     sequelize,

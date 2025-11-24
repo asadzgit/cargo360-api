@@ -13,7 +13,8 @@ exports.createShipmentSchema = Joi.object({
   insurance: Joi.boolean().optional(),
   salesTax: Joi.boolean().optional(),
   numberOfVehicles: Joi.number().integer().min(1).optional(),
-  deliveryDate: Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/).optional().allow('', null)
+  deliveryDate: Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/).optional().allow('', null),
+  clearingAgentNum: Joi.string().max(100).optional().allow('', null)
 });
 
 // Update shipment validation (for customers)
@@ -29,7 +30,8 @@ exports.updateShipmentSchema = Joi.object({
   insurance: Joi.boolean().optional(),
   salesTax: Joi.boolean().optional(),
   numberOfVehicles: Joi.number().integer().min(1).optional(),
-  deliveryDate: Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/).optional().allow('', null)
+  deliveryDate: Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/).optional().allow('', null),
+  clearingAgentNum: Joi.string().max(100).optional().allow('', null)
 });
 
 // Status update validation (for truckers)
