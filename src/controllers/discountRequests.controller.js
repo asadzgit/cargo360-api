@@ -1,5 +1,6 @@
-const { DiscountRequest, Shipment, sequelize } = require('../../models');
+const { DiscountRequest, Shipment, User, sequelize } = require('../../models');
 const { createDiscountRequestSchema, decideDiscountRequestSchema } = require('../validation/discountRequests.schema');
+const { sendUserNotification } = require('../helpers/notify');
 
 // POST /shipments/:id/discount-request (customer)
 exports.createForShipment = async (req, res, next) => {
@@ -48,8 +49,52 @@ exports.decide = async (req, res, next) => {
       return dr;
     });
 
-    // Refetch with latest state
-    const updated = await DiscountRequest.findByPk(result.id);
+    // Refetch with latest state and shipment info
+    const updated = await DiscountRequest.findByPk(result.id, {
+      include: [{
+        model: Shipment,
+        include: [{ model: User, as: 'Customer', attributes: ['id', 'name', 'company', 'phone'] }]
+      }]
+    });
+    
+    // Notify customer about discount request decision
+    if (updated && updated.Shipment && updated.Shipment.Customer) {
+      try {
+        const formatCurrency = (amount) => {
+          if (!amount) return 'N/A';
+          return `Rs. ${parseFloat(amount).toLocaleString('en-PK')}`;
+        };
+        
+        if (action === 'accept') {
+          await sendUserNotification(
+            updated.Shipment.Customer.id,
+            'Discount Request Approved',
+            `Your discount request has been approved. Your shipment budget has been updated to ${formatCurrency(updated.requestAmount)}.`,
+            {
+              type: 'discount_request_approved',
+              shipmentId: updated.shipmentId,
+              requestId: updated.id,
+              approvedAmount: updated.requestAmount
+            }
+          );
+        } else if (action === 'reject') {
+          await sendUserNotification(
+            updated.Shipment.Customer.id,
+            'Discount Request Rejected',
+            `Your discount request for ${formatCurrency(updated.requestAmount)} has been rejected.`,
+            {
+              type: 'discount_request_rejected',
+              shipmentId: updated.shipmentId,
+              requestId: updated.id,
+              requestedAmount: updated.requestAmount
+            }
+          );
+        }
+      } catch (notificationError) {
+        console.error('Failed to send discount request notification:', notificationError);
+      }
+    }
+    
     return res.json({ success: true, message: 'Decision recorded', data: { discountRequest: updated } });
   } catch (e) { next(e); }
 };

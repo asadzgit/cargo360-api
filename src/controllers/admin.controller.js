@@ -1,6 +1,7 @@
 const { User, Shipment, Vehicle } = require('../../models/index');
 const { updateShipmentSchema } = require('../validation/shipments.schema');
 const { formatShipmentDates } = require('../utils/dateFormatter');
+const { notifyCustomerAboutShipment } = require('../helpers/notify');
 
 exports.listUsers = async (_req, res, next) => {
   try {
@@ -36,6 +37,19 @@ exports.updateShipment = async (req, res, next) => {
       return next(Object.assign(new Error('Shipment not found'), { status: 404 }));
     }
     
+    // Track what changed for notification
+    const changes = {};
+    const fieldsToTrack = [
+      'budget', 'pickupLocation', 'dropLocation', 'cargoType', 'vehicleType',
+      'deliveryDate', 'insurance', 'salesTax', 'numberOfVehicles', 'clearingAgentNum'
+    ];
+    
+    fieldsToTrack.forEach(field => {
+      if (data[field] !== undefined && data[field] !== shipment[field]) {
+        changes[field] = data[field];
+      }
+    });
+    
     await shipment.update(data, { userId: req.user.id });
     
     const updated = await Shipment.findByPk(shipment.id, {
@@ -45,6 +59,18 @@ exports.updateShipment = async (req, res, next) => {
         { model: User, as: 'Driver', attributes: ['id', 'name', 'company', 'phone'] }
       ]
     });
+    
+    // Notify customer about admin update (only if something actually changed)
+    if (Object.keys(changes).length > 0) {
+      try {
+        await notifyCustomerAboutShipment(updated, { 
+          updateType: 'admin_update',
+          changes 
+        });
+      } catch (notificationError) {
+        console.error('Failed to send admin update notification:', notificationError);
+      }
+    }
     
     res.json({ 
       success: true,

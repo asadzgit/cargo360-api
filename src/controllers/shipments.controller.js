@@ -10,6 +10,7 @@ const {
 const { sendShipmentNotification, sendShipmentConfirmationNotification } = require('../utils/emailService');
 const { Op } = require('sequelize');
 const { formatShipmentDates } = require('../utils/dateFormatter');
+const { notifyCustomerAboutShipment } = require('../helpers/notify');
 
 // CREATE - POST /shipments
 exports.create = async (req, res, next) => {
@@ -127,6 +128,13 @@ exports.accept = async (req, res, next) => {
       ]
     });
     
+    // Notify customer that broker accepted their shipment
+    try {
+      await notifyCustomerAboutShipment(updated, { updateType: 'trucker_accepted' });
+    } catch (notificationError) {
+      console.error('Failed to send trucker acceptance notification:', notificationError);
+    }
+    
     res.json({ 
       success: true,
       message: 'Shipment accepted successfully',
@@ -149,6 +157,7 @@ exports.updateStatus = async (req, res, next) => {
       return next(Object.assign(new Error('Shipment not found or unauthorized'), { status: 404 }));
     }
     
+    const oldStatus = shipment.status;
     await shipment.update({ status }, { userId: req.user.id });
     
     const updated = await Shipment.findByPk(shipment.id, {
@@ -158,6 +167,15 @@ exports.updateStatus = async (req, res, next) => {
         { model: DiscountRequest, as: 'DiscountRequest', attributes: ['id','requestAmount','status'] },
       ]
     });
+    
+    // Notify customer about status change (only if status actually changed)
+    if (oldStatus !== status) {
+      try {
+        await notifyCustomerAboutShipment(updated, { updateType: 'status_change' });
+      } catch (notificationError) {
+        console.error('Failed to send status change notification:', notificationError);
+      }
+    }
     
     res.json({ 
       success: true,
@@ -253,6 +271,13 @@ exports.cancelByCustomer = async (req, res, next) => {
       include: [{ model: User, as: 'Customer', attributes: ['id', 'name', 'company', 'phone'] }]
     });
     
+    // Notify customer about cancellation
+    try {
+      await notifyCustomerAboutShipment(updated, { updateType: 'cancelled' });
+    } catch (notificationError) {
+      console.error('Failed to send cancellation notification:', notificationError);
+    }
+    
     res.json({ 
       success: true,
       message: 'Shipment cancelled successfully',
@@ -284,6 +309,13 @@ exports.confirmByCustomer = async (req, res, next) => {
     } catch (emailError) {
       console.error('Failed to send shipment confirmation notification email:', emailError);
       // Don't fail the request if email fails
+    }
+    
+    // Notify customer about confirmation
+    try {
+      await notifyCustomerAboutShipment(updated, { updateType: 'confirmed' });
+    } catch (notificationError) {
+      console.error('Failed to send confirmation notification:', notificationError);
     }
     
     res.json({ 
@@ -384,6 +416,13 @@ exports.update = async (req, res, next) => {
       ]
     });
     
+    // Notify customer about their own update
+    try {
+      await notifyCustomerAboutShipment(updated, { updateType: 'customer_update' });
+    } catch (notificationError) {
+      console.error('Failed to send customer update notification:', notificationError);
+    }
+    
     res.json({ 
       success: true,
       message: 'Shipment updated successfully',
@@ -408,6 +447,18 @@ exports.delete = async (req, res, next) => {
       : shipment.cancelReason,
     cancelledBy: 'Super Admin'
   }, { userId: req.user.id });
+  
+  // Fetch updated shipment with customer info for notification
+  const updatedShipment = await Shipment.findByPk(shipment.id, {
+    include: [{ model: User, as: 'Customer', attributes: ['id', 'name', 'company', 'phone'] }]
+  });
+  
+  // Notify customer about admin cancellation
+  try {
+    await notifyCustomerAboutShipment(updatedShipment, { updateType: 'admin_cancelled' });
+  } catch (notificationError) {
+    console.error('Failed to send admin cancellation notification:', notificationError);
+  }
     
     res.json({ 
       success: true,

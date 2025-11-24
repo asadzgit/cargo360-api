@@ -1,6 +1,7 @@
 const { Shipment, User } = require('../../models/index');
 const { assignmentSchema, assignDriverByBrokerSchema } = require('../validation/shipments.schema');
 const { formatShipmentDates } = require('../utils/dateFormatter');
+const { notifyCustomerAboutShipment } = require('../helpers/notify');
 
 // ASSIGN - PATCH /shipments/:id/assign (Admin assigns trucker or driver)
 exports.assign = async (req, res, next) => {
@@ -60,6 +61,17 @@ exports.assign = async (req, res, next) => {
       ]
     });
     
+    // Notify customer about assignment
+    try {
+      if (data.assignment === 'trucker') {
+        await notifyCustomerAboutShipment(updatedShipment, { updateType: 'trucker_assigned' });
+      } else if (data.assignment === 'driver') {
+        await notifyCustomerAboutShipment(updatedShipment, { updateType: 'driver_assigned' });
+      }
+    } catch (notificationError) {
+      console.error('Failed to send assignment notification:', notificationError);
+    }
+    
     res.json({
       success: true,
       message: `Shipment assigned to ${data.assignment} successfully`,
@@ -109,6 +121,13 @@ exports.assignDriverByBroker = async (req, res, next) => {
         { model: User, as: 'Driver', attributes: ['id', 'name', 'company', 'email', 'phone'] }
       ]
     });
+
+    // Notify customer that broker assigned a driver
+    try {
+      await notifyCustomerAboutShipment(updatedShipment, { updateType: 'broker_driver_assigned' });
+    } catch (notificationError) {
+      console.error('Failed to send broker driver assignment notification:', notificationError);
+    }
 
     res.json({
       success: true,
