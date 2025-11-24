@@ -32,6 +32,12 @@ module.exports = (sequelize, DataTypes) => {
 
       // Keep old brokerId field for backward compatibility (will be deprecated)
       User.belongsTo(models.User, { as: 'PrimaryBroker', foreignKey: 'brokerId' });
+
+      // 📱 User → DeviceTokens
+      User.hasMany(models.DeviceToken, { foreignKey: 'userId', as: 'DeviceTokens' });
+
+      // 🔔 User → Notifications
+      User.hasMany(models.Notification, { foreignKey: 'userId', as: 'Notifications' });
     }
   }
   User.init({
