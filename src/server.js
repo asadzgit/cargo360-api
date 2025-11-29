@@ -15,6 +15,8 @@ const discountRequestsRoutes = require('./routes/discountRequests.routes');
 const usersRoutes = require('./routes/users.routes');
 const devicesRoutes = require('./routes/devices.routes');
 const notificationsRoutes = require('./routes/notifications.routes');
+const clearanceRequestsRoutes = require('./routes/clearanceRequests.routes');
+const documentsRoutes = require('./routes/documents.routes');
 const cookieParser = require('cookie-parser');
 
 const app = express();
@@ -159,6 +161,8 @@ app.use('/discount-requests', discountRequestsRoutes);
 app.use('/users', usersRoutes);
 app.use('/devices', devicesRoutes);
 app.use('/notifications', notificationsRoutes);
+app.use('/clearance-requests', clearanceRequestsRoutes);
+app.use('/documents', documentsRoutes);
 
 // Health check endpoints
 app.get('/', (req, res) => {

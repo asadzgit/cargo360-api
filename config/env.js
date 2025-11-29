@@ -16,5 +16,10 @@ module.exports = {
     accessExpires: process.env.JWT_ACCESS_EXPIRES || '30d',
     refreshExpires: process.env.JWT_REFRESH_EXPIRES || '40d'
   },
-  corsOrigin: process.env.CORS_ORIGIN || '*'
+  corsOrigin: process.env.CORS_ORIGIN || '*',
+  cloudinary: {
+    cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+    apiKey: process.env.CLOUDINARY_API_KEY,
+    apiSecret: process.env.CLOUDINARY_API_SECRET
+  }
 };
