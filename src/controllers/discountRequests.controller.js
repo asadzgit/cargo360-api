@@ -36,10 +36,52 @@ exports.decide = async (req, res, next) => {
       }
 
       if (action === 'accept') {
-        // Update shipment budget to requestAmount
+        // requestAmount is what customer wants to pay (their desired total)
+        // totalAmount = requestAmount (what customer will pay)
+        // discount amount = budget - requestAmount
         const shipment = await Shipment.findByPk(dr.shipmentId, { transaction: t });
         if (!shipment) throw Object.assign(new Error('Related shipment not found'), { status: 404 });
-        await shipment.update({ budget: dr.requestAmount }, { transaction: t, userId: actingUserId });
+        
+        // Ensure budget exists and is valid
+        if (!shipment.budget || parseFloat(shipment.budget) <= 0) {
+          throw Object.assign(new Error('Shipment budget is not set or invalid'), { status: 400 });
+        }
+        
+        // Store original budget to ensure it's not changed
+        const originalBudget = parseFloat(shipment.budget);
+        const requestAmount = parseFloat(dr.requestAmount);
+        
+        // Validate: requestAmount should be less than or equal to budget
+        if (requestAmount > originalBudget) {
+          throw Object.assign(new Error('Requested amount cannot exceed admin budget'), { status: 400 });
+        }
+        
+        if (requestAmount <= 0) {
+          throw Object.assign(new Error('Requested amount must be greater than 0'), { status: 400 });
+        }
+        
+        // IMPORTANT: Only update totalAmount, NEVER update budget
+        // Use raw SQL to ensure ONLY totalAmount is updated, budget is NEVER touched
+        // This prevents any hooks or model logic from accidentally modifying budget
+        const [updateResult] = await sequelize.query(
+          `UPDATE "Shipments" SET "totalAmount" = :totalAmount, "updatedAt" = NOW() WHERE "id" = :shipmentId`,
+          {
+            replacements: { 
+              totalAmount: requestAmount,
+              shipmentId: shipment.id 
+            },
+            transaction: t,
+            type: sequelize.QueryTypes.UPDATE
+          }
+        );
+        
+        // Reload to verify budget was not changed (safety check)
+        await shipment.reload({ transaction: t });
+        const currentBudget = parseFloat(shipment.budget);
+        if (Math.abs(currentBudget - originalBudget) > 0.01) { // Allow for floating point precision
+          throw Object.assign(new Error(`Budget was unexpectedly modified from ${originalBudget} to ${currentBudget}. Rolling back transaction.`), { status: 500 });
+        }
+        
         await dr.update({ status: 'accepted' }, { transaction: t });
       } else if (action === 'reject') {
         await dr.update({ status: 'rejected' }, { transaction: t });

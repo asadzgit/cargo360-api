@@ -105,6 +105,11 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false
     },
     budget: DataTypes.DECIMAL,
+    totalAmount: {
+      type: DataTypes.DECIMAL,
+      allowNull: true,
+      comment: 'Final amount after discount (budget - discount)'
+    },
     insurance: {
       type: DataTypes.BOOLEAN,
       allowNull: false,
