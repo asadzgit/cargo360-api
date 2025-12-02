@@ -29,9 +29,14 @@ exports.listShipments = async (_req, res, next) => {
 // UPDATE - PUT /admin/shipments/:id (Admin can update any shipment regardless of status)
 exports.updateShipment = async (req, res, next) => {
   try {
+    // Extract companyName before validation (it's not part of shipment schema)
+    const companyName = req.body.companyName;
+    
     const data = await updateShipmentSchema.validateAsync(req.body, { stripUnknown: true });
     
-    const shipment = await Shipment.findByPk(req.params.id);
+    const shipment = await Shipment.findByPk(req.params.id, {
+      include: [{ model: User, as: 'Customer', attributes: ['id', 'name', 'company', 'phone'] }]
+    });
     
     if (!shipment) {
       return next(Object.assign(new Error('Shipment not found'), { status: 404 }));
@@ -50,7 +55,20 @@ exports.updateShipment = async (req, res, next) => {
       }
     });
     
+    // Update shipment fields
     await shipment.update(data, { userId: req.user.id });
+    
+    // Update customer company name if provided
+    if (companyName !== undefined && companyName !== null) {
+      const customer = shipment.Customer;
+      if (customer) {
+        const oldCompany = customer.company;
+        if (companyName.trim() !== oldCompany) {
+          await customer.update({ company: companyName.trim() }, { userId: req.user.id });
+          changes.companyName = companyName.trim();
+        }
+      }
+    }
     
     const updated = await Shipment.findByPk(shipment.id, {
       include: [
