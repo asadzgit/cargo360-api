@@ -2,11 +2,17 @@ const Joi = require('joi');
 
 exports.signupSchema = Joi.object({
   name: Joi.string().min(2).required(),
-  company: Joi.string().min(2).when('role', {
-    is: 'customer',
-    then: Joi.required(),
-    otherwise: Joi.optional()
-  }),
+  company: Joi.string()
+    .min(3)
+    .pattern(/^[a-zA-Z\s]+$/)
+    .when('role', {
+      is: 'customer',
+      then: Joi.required().messages({
+        'string.min': 'Company name must be at least 3 characters',
+        'string.pattern.base': 'Company name can only contain letters and spaces'
+      }),
+      otherwise: Joi.optional()
+    }),
   email: Joi.string().email().required(),
   phone: Joi.string().min(6).optional(),
   password: Joi.string().min(6).required(),
