@@ -6,7 +6,7 @@ const { Op } = require('sequelize');
 const { signupSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema, phoneCheckSchema, phoneSignupSchema, verifyOtpSchema, setPinSchema, phoneLoginSchema, resendOtpSchema } = require('../validation/auth.schema');
 
 const { jwt: jwtCfg } = require('../../config/env');
-const { User } = require('../../models/index');
+const { User, sequelize } = require('../../models/index');
 const { generateToken, sendVerificationEmail, sendPasswordResetEmail } = require('../utils/emailService');
 const { ERROR_CODES, createError, handleJoiError, handleSequelizeError } = require('../utils/errorHandler');
 
@@ -70,8 +70,16 @@ exports.signup = async (req, res, next) => {
   try {
     const data = await signupSchema.validateAsync(req.body, { stripUnknown: true });
     
-    // Check for existing email
-    const emailExists = await User.findOne({ where: { email: data.email } });
+    // Normalize email to lowercase for case-insensitive handling
+    const normalizedEmail = (data.email || '').toLowerCase().trim();
+    
+    // Check for existing email (case-insensitive)
+    const emailExists = await User.findOne({ 
+      where: sequelize.where(
+        sequelize.fn('LOWER', sequelize.col('email')),
+        normalizedEmail
+      )
+    });
     if (emailExists) return next(createError('An account with this email already exists', ERROR_CODES.EMAIL_ALREADY_EXISTS, 409));
     
     // Normalize phone and check for existing within the same role
@@ -125,7 +133,7 @@ exports.signup = async (req, res, next) => {
     const user = await User.create({
       name: data.name,
       company: data.company || null,
-      email: data.email,
+      email: normalizedEmail, // Save email in lowercase
       phone: normalizedPhone,
       passwordHash,
       role,
@@ -162,7 +170,15 @@ exports.signup = async (req, res, next) => {
 exports.login = async (req, res, next) => {
   try {
     const data = await loginSchema.validateAsync(req.body, { stripUnknown: true });
-    const user = await User.findOne({ where: { email: data.email } });
+    // Convert email to lowercase for case-insensitive login
+    const normalizedEmail = (data.email || '').toLowerCase().trim();
+    // Use case-insensitive query to handle existing data with mixed case
+    const user = await User.findOne({ 
+      where: sequelize.where(
+        sequelize.fn('LOWER', sequelize.col('email')),
+        normalizedEmail
+      )
+    });
     if (!user) return next(createError('Invalid email or password', ERROR_CODES.INVALID_CREDENTIALS, 401));
     const ok = await bcrypt.compare(data.password, user.passwordHash);
     if (!ok) return next(createError('Invalid email or password', ERROR_CODES.INVALID_CREDENTIALS, 401));
@@ -279,7 +295,14 @@ exports.resendVerification = async (req, res, next) => {
     const { email } = req.body;
     if (!email) return next(createError('Email address is required', ERROR_CODES.MISSING_FIELD, 400));
 
-    const user = await User.findOne({ where: { email } });
+    // Normalize email to lowercase for case-insensitive lookup
+    const normalizedEmail = (email || '').toLowerCase().trim();
+    const user = await User.findOne({ 
+      where: sequelize.where(
+        sequelize.fn('LOWER', sequelize.col('email')),
+        normalizedEmail
+      )
+    });
     if (!user) return next(createError('No account found with this email address', ERROR_CODES.USER_NOT_FOUND, 404));
 
     if (user.isEmailVerified) {
@@ -320,7 +343,14 @@ exports.forgotPassword = async (req, res, next) => {
     const data = await forgotPasswordSchema.validateAsync(req.body, { stripUnknown: true });
     const { email } = data;
 
-    const user = await User.findOne({ where: { email } });
+    // Normalize email to lowercase for case-insensitive lookup
+    const normalizedEmail = (email || '').toLowerCase().trim();
+    const user = await User.findOne({ 
+      where: sequelize.where(
+        sequelize.fn('LOWER', sequelize.col('email')),
+        normalizedEmail
+      )
+    });
     if (!user) {
       // Don't reveal if user exists or not for security
       return res.json({ message: 'If an account with that email exists, a password reset link has been sent.' });
