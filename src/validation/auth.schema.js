@@ -4,12 +4,28 @@ exports.signupSchema = Joi.object({
   name: Joi.string().min(2).required(),
   company: Joi.string()
     .min(3)
-    .pattern(/^[a-zA-Z\s]+$/)
+    .pattern(/^[a-zA-Z0-9\s]+$/)
+    .custom((value, helpers) => {
+      // Count letters in the company name
+      const letterCount = (value.match(/[a-zA-Z]/g) || []).length;
+      // Check if it's only digits
+      const isOnlyDigits = /^\d+$/.test(value.replace(/\s/g, ''));
+      
+      if (letterCount < 3) {
+        return helpers.error('string.minLetters');
+      }
+      if (isOnlyDigits) {
+        return helpers.error('string.noDigitsOnly');
+      }
+      return value;
+    })
     .when('role', {
       is: 'customer',
       then: Joi.required().messages({
         'string.min': 'Company name must be at least 3 characters',
-        'string.pattern.base': 'Company name can only contain letters and spaces'
+        'string.pattern.base': 'Company name can only contain letters, numbers, and spaces',
+        'string.minLetters': 'Company name must contain at least 3 letters',
+        'string.noDigitsOnly': 'Company name cannot contain only digits'
       }),
       otherwise: Joi.optional()
     }),

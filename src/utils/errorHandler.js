@@ -83,7 +83,11 @@ const handleJoiError = (joiError) => {
       if (details.type === 'string.min') {
         message = 'Company name must be at least 3 characters';
       } else if (details.type === 'string.pattern.base') {
-        message = 'Company name can only contain letters and spaces';
+        message = 'Company name can only contain letters, numbers, and spaces';
+      } else if (details.type === 'string.minLetters') {
+        message = 'Company name must contain at least 3 letters';
+      } else if (details.type === 'string.noDigitsOnly') {
+        message = 'Company name cannot contain only digits';
       } else {
         message = 'Company name is required';
       }
