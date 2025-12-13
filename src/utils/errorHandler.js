@@ -79,6 +79,20 @@ const handleJoiError = (joiError) => {
       }
       code = ERROR_CODES.INVALID_PHONE;
       break;
+    case 'company':
+      if (details.type === 'string.min') {
+        message = 'Company name must be at least 3 characters';
+      } else if (details.type === 'string.pattern.base') {
+        message = 'Company name can only contain letters, numbers, and spaces';
+      } else if (details.type === 'string.minLetters') {
+        message = 'Company name must contain at least 3 letters';
+      } else if (details.type === 'string.noDigitsOnly') {
+        message = 'Company name cannot contain only digits';
+      } else {
+        message = 'Company name is required';
+      }
+      code = ERROR_CODES.VALIDATION_ERROR;
+      break;
     case 'role':
       if (details.type === 'any.only') {
         message = 'Role must be either "customer" or "trucker"';
