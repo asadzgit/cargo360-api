@@ -1,12 +1,7 @@
 const { Shipment, User } = require('../../models/index');
-<<<<<<< Updated upstream
 const { assignmentSchema, assignDriverByBrokerSchema } = require('../validation/shipments.schema');
 const { formatShipmentDates } = require('../utils/dateFormatter');
 const { notifyCustomerAboutShipment } = require('../helpers/notify');
-=======
-const { assignmentSchema } = require('../validation/shipments.schema');
-const { formatShipmentDates } = require('../utils/dateFormatter');
->>>>>>> Stashed changes
 
 // ASSIGN - PATCH /shipments/:id/assign (Admin assigns trucker or driver)
 exports.assign = async (req, res, next) => {
@@ -81,7 +76,6 @@ exports.assign = async (req, res, next) => {
       success: true,
       message: `Shipment assigned to ${data.assignment} successfully`,
       data: { shipment: formatShipmentDates(updatedShipment) }
-<<<<<<< Updated upstream
     });
   } catch (e) { next(e); }
 };
@@ -139,8 +133,6 @@ exports.assignDriverByBroker = async (req, res, next) => {
       success: true,
       message: 'Driver assigned to shipment successfully',
       data: { shipment: formatShipmentDates(updatedShipment) }
-=======
->>>>>>> Stashed changes
     });
   } catch (e) { next(e); }
 };

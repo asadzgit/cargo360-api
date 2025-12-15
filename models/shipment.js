@@ -124,7 +124,6 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.ENUM('pending','confirmed','accepted','picked_up','in_transit','delivered','cancelled'),
       defaultValue: 'pending'
     },
-<<<<<<< Updated upstream
     cancelReason: {
       type: DataTypes.TEXT,
       allowNull: true
@@ -140,11 +139,6 @@ module.exports = (sequelize, DataTypes) => {
     clearingAgentNum: {
       type: DataTypes.STRING,
       allowNull: true
-=======
-    deliveryDate: {
-      type: DataTypes.DATEONLY,
-      allowNull: true
->>>>>>> Stashed changes
     }
   }, {
     sequelize,
