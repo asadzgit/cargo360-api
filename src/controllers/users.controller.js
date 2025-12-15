@@ -24,6 +24,7 @@ exports.updateMe = async (req, res, next) => {
     const patch = {};
     if (typeof data.name === 'string') patch.name = data.name;
     if (typeof data.phone === 'string') patch.phone = data.phone;
+    if (data.company !== undefined) patch.company = data.company || null;
 
     if (Object.keys(patch).length > 0) {
       await user.update(patch);
