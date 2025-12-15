@@ -1,7 +1,10 @@
 const { User, Shipment, Vehicle } = require('../../models/index');
 const { updateShipmentSchema } = require('../validation/shipments.schema');
 const { formatShipmentDates } = require('../utils/dateFormatter');
+<<<<<<< Updated upstream
 const { notifyCustomerAboutShipment } = require('../helpers/notify');
+=======
+>>>>>>> Stashed changes
 
 exports.listUsers = async (_req, res, next) => {
   try {

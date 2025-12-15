@@ -10,7 +10,10 @@ const {
 const { sendShipmentNotification, sendShipmentConfirmationNotification } = require('../utils/emailService');
 const { Op } = require('sequelize');
 const { formatShipmentDates } = require('../utils/dateFormatter');
+<<<<<<< Updated upstream
 const { notifyCustomerAboutShipment } = require('../helpers/notify');
+=======
+>>>>>>> Stashed changes
 
 // CREATE - POST /shipments
 exports.create = async (req, res, next) => {
@@ -282,6 +285,7 @@ exports.cancelByCustomer = async (req, res, next) => {
       success: true,
       message: 'Shipment cancelled successfully',
       data: { shipment: formatShipmentDates(updated) }
+<<<<<<< Updated upstream
     });
   } catch (e) { next(e); }
 };
@@ -322,6 +326,8 @@ exports.confirmByCustomer = async (req, res, next) => {
       success: true,
       message: 'Shipment confirmed successfully',
       data: { shipment: formatShipmentDates(updated) }
+=======
+>>>>>>> Stashed changes
     });
   } catch (e) { next(e); }
 };
@@ -355,6 +361,7 @@ exports.getById = async (req, res, next) => {
     res.json({ 
       success: true,
       data: { shipment: formatShipmentDates(shipment) }
+<<<<<<< Updated upstream
     });
   } catch (e) { next(e); }
 };
@@ -390,6 +397,8 @@ exports.getLogs = async (req, res, next) => {
         shipmentId: shipment.id,
         logs
       }
+=======
+>>>>>>> Stashed changes
     });
   } catch (e) { next(e); }
 };

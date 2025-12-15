@@ -13,8 +13,12 @@ exports.createShipmentSchema = Joi.object({
   insurance: Joi.boolean().optional(),
   salesTax: Joi.boolean().optional(),
   numberOfVehicles: Joi.number().integer().min(1).optional(),
+<<<<<<< Updated upstream
   deliveryDate: Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/).optional().allow('', null),
   clearingAgentNum: Joi.string().max(100).optional().allow('', null)
+=======
+  deliveryDate: Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/).optional().allow('', null)
+>>>>>>> Stashed changes
 });
 
 // Update shipment validation (for customers)
@@ -30,8 +34,12 @@ exports.updateShipmentSchema = Joi.object({
   insurance: Joi.boolean().optional(),
   salesTax: Joi.boolean().optional(),
   numberOfVehicles: Joi.number().integer().min(1).optional(),
+<<<<<<< Updated upstream
   deliveryDate: Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/).optional().allow('', null),
   clearingAgentNum: Joi.string().max(100).optional().allow('', null)
+=======
+  deliveryDate: Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/).optional().allow('', null)
+>>>>>>> Stashed changes
 });
 
 // Status update validation (for truckers)
