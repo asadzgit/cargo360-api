@@ -206,7 +206,9 @@ exports.login = async (req, res, next) => {
 
 exports.me = async (req, res, next) => {
   try {
-    const user = await User.findByPk(req.user.id, { attributes: ['id','name','company','email','phone','role','isApproved','isEmailVerified'] });
+    const user = await User.findByPk(req.user.id, { 
+      attributes: ['id','name','company','email','phone','role','isApproved','isEmailVerified','cnic','license','vehicleRegistration'] 
+    });
     res.json({ user });
   } catch (e) { 
     if (e.isJoi) {

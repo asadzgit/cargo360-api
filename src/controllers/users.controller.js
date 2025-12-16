@@ -24,6 +24,10 @@ exports.updateMe = async (req, res, next) => {
     const patch = {};
     if (typeof data.name === 'string') patch.name = data.name;
     if (typeof data.phone === 'string') patch.phone = data.phone;
+    if (data.company !== undefined) patch.company = data.company || null;
+    if (data.cnic !== undefined) patch.cnic = data.cnic || null;
+    if (data.license !== undefined) patch.license = data.license || null;
+    if (data.vehicleRegistration !== undefined) patch.vehicleRegistration = data.vehicleRegistration || null;
 
     if (Object.keys(patch).length > 0) {
       await user.update(patch);
@@ -37,7 +41,10 @@ exports.updateMe = async (req, res, next) => {
       phone: user.phone,
       role: user.role,
       isApproved: user.isApproved,
-      isEmailVerified: user.isEmailVerified
+      isEmailVerified: user.isEmailVerified,
+      cnic: user.cnic,
+      license: user.license,
+      vehicleRegistration: user.vehicleRegistration
     };
 
     // Send push notification about profile update (non-blocking)
@@ -280,4 +287,60 @@ exports.listDrivers = async (req, res, next) => {
 
     res.json({ success: true, data: { count, drivers } });
   } catch (e) { next(e); }
+};
+
+// DELETE /users/drivers/:driverId (broker-only) - remove driver from broker
+exports.removeDriver = async (req, res, next) => {
+  try {
+    const driverId = parseInt(req.params.driverId, 10);
+    if (!driverId || isNaN(driverId)) {
+      return next(Object.assign(new Error('Invalid driver ID'), { status: 400 }));
+    }
+
+    // Role already enforced by middleware; double-check for safety
+    if (req.user?.role !== 'trucker' && req.user?.role !== 'admin') {
+      return next(Object.assign(new Error('Forbidden'), { status: 403 }));
+    }
+
+    const { User, BrokerDriver } = require('../../models');
+    
+    // First verify the driver exists and is actually a driver
+    const driver = await User.findByPk(driverId);
+    if (!driver) {
+      return next(Object.assign(new Error('Driver not found'), { status: 404 }));
+    }
+    
+    if (driver.role !== 'driver') {
+      return next(Object.assign(new Error('User is not a driver'), { status: 400 }));
+    }
+    
+    // Check if driver is linked to this broker (either through BrokerDriver table or old brokerId field)
+    const link = await BrokerDriver.findOne({
+      where: {
+        brokerId: req.user.id,
+        driverId: driverId
+      }
+    });
+
+    const isLinkedViaBrokerId = driver.brokerId === req.user.id;
+
+    if (!link && !isLinkedViaBrokerId) {
+      return next(Object.assign(new Error('Driver not found or not linked to your account'), { status: 404 }));
+    }
+
+    // Delete from BrokerDriver table if it exists
+    if (link) {
+      await link.destroy();
+    }
+    
+    // Also clear the old brokerId field for backward compatibility
+    if (isLinkedViaBrokerId && driver.brokerId === req.user.id) {
+      await driver.update({ brokerId: null });
+    }
+
+    res.json({ success: true, message: 'Driver removed successfully' });
+  } catch (e) {
+    console.error('Error removing driver:', e);
+    next(e);
+  }
 };
