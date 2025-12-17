@@ -5,5 +5,6 @@ exports.createDiscountRequestSchema = Joi.object({
 });
 
 exports.decideDiscountRequestSchema = Joi.object({
-  action: Joi.string().valid('accept', 'reject').required()
+  action: Joi.string().valid('accept', 'reject').required(),
+  counterOffer: Joi.number().positive().optional()
 });
