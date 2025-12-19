@@ -68,7 +68,11 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: false
     },
     // 🔗 Broker linkage for drivers
-    brokerId: DataTypes.INTEGER
+    brokerId: DataTypes.INTEGER,
+    // 📄 Driver profile fields
+    cnic: DataTypes.STRING,
+    license: DataTypes.STRING,
+    vehicleRegistration: DataTypes.STRING
   }, {
     sequelize,
     modelName: 'User',

@@ -15,4 +15,7 @@ router.post('/drivers', auth, requireRole('trucker'), ctrl.addDriver);
 // Broker lists drivers
 router.get('/drivers', auth, requireRole('trucker'), ctrl.listDrivers);
 
+// Broker removes driver
+router.delete('/drivers/:driverId', auth, requireRole('trucker'), ctrl.removeDriver);
+
 module.exports = router;
