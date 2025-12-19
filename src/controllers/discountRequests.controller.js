@@ -26,7 +26,7 @@ exports.decide = async (req, res, next) => {
   const id = parseInt(req.params.id, 10);
   const actingUserId = req.user?.id ?? -1;
   try {
-    const { action } = await decideDiscountRequestSchema.validateAsync(req.body);
+    const { action, counterOffer } = await decideDiscountRequestSchema.validateAsync(req.body);
 
     // Use a transaction when accepting to also update shipment budget atomically
     const result = await sequelize.transaction(async (t) => {
@@ -37,9 +37,10 @@ exports.decide = async (req, res, next) => {
       }
 
       if (action === 'accept') {
-        // requestAmount is what customer wants to pay (their desired total)
-        // totalAmount = requestAmount (what customer will pay)
-        // discount amount = budget - requestAmount
+        // Admin can accept with original requestAmount or provide a counter offer
+        // If counterOffer is provided, use it; otherwise use the original requestAmount
+        // totalAmount = counterOffer (if provided) or requestAmount (what customer will pay)
+        // discount amount = budget - totalAmount
         const shipment = await Shipment.findByPk(dr.shipmentId, { transaction: t });
         if (!shipment) throw Object.assign(new Error('Related shipment not found'), { status: 404 });
         
@@ -50,15 +51,22 @@ exports.decide = async (req, res, next) => {
         
         // Store original budget to ensure it's not changed
         const originalBudget = parseFloat(shipment.budget);
-        const requestAmount = parseFloat(dr.requestAmount);
         
-        // Validate: requestAmount should be less than or equal to budget
-        if (requestAmount > originalBudget) {
-          throw Object.assign(new Error('Requested amount cannot exceed admin budget'), { status: 400 });
+        // Determine the final amount: use counter offer if provided, otherwise use original request
+        const finalAmount = counterOffer ? parseFloat(counterOffer) : parseFloat(dr.requestAmount);
+        
+        // If admin provided a counter offer, update the requestAmount to reflect the counter offer
+        if (counterOffer) {
+          await dr.update({ requestAmount: finalAmount }, { transaction: t });
         }
         
-        if (requestAmount <= 0) {
-          throw Object.assign(new Error('Requested amount must be greater than 0'), { status: 400 });
+        // Validate: finalAmount should be less than or equal to budget
+        if (finalAmount > originalBudget) {
+          throw Object.assign(new Error('Accepted amount cannot exceed admin budget'), { status: 400 });
+        }
+        
+        if (finalAmount <= 0) {
+          throw Object.assign(new Error('Accepted amount must be greater than 0'), { status: 400 });
         }
         
         // IMPORTANT: Only update totalAmount, NEVER update budget
@@ -68,7 +76,7 @@ exports.decide = async (req, res, next) => {
           `UPDATE "Shipments" SET "totalAmount" = :totalAmount, "updatedAt" = NOW() WHERE "id" = :shipmentId`,
           {
             replacements: { 
-              totalAmount: requestAmount,
+              totalAmount: finalAmount,
               shipmentId: shipment.id 
             },
             transaction: t,
@@ -108,15 +116,19 @@ exports.decide = async (req, res, next) => {
         };
         
         if (action === 'accept') {
+          const message = counterOffer 
+            ? `Your discount request has been approved with a counter offer. Your shipment budget has been updated to ${formatCurrency(updated.requestAmount)}.`
+            : `Your discount request has been approved. Your shipment budget has been updated to ${formatCurrency(updated.requestAmount)}.`;
           await sendUserNotification(
             updated.Shipment.Customer.id,
             'Discount Request Approved',
-            `Your discount request has been approved. Your shipment budget has been updated to ${formatCurrency(updated.requestAmount)}.`,
+            message,
             {
               type: 'discount_request_approved',
               shipmentId: updated.shipmentId,
               requestId: updated.id,
-              approvedAmount: updated.requestAmount
+              approvedAmount: updated.requestAmount,
+              isCounterOffer: !!counterOffer
             }
           );
         } else if (action === 'reject') {
