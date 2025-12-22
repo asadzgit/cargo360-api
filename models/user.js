@@ -72,7 +72,13 @@ module.exports = (sequelize, DataTypes) => {
     // 📄 Driver profile fields
     cnic: DataTypes.STRING,
     license: DataTypes.STRING,
-    vehicleRegistration: DataTypes.STRING
+    vehicleRegistration: DataTypes.STRING,
+    // ✅ Driver signup status
+    hasSignedUp: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      allowNull: false
+    }
   }, {
     sequelize,
     modelName: 'User',

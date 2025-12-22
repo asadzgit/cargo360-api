@@ -204,7 +204,8 @@ exports.addDriver = async (req, res, next) => {
       isApproved: true,
       isPhoneVerified: false,
       otpCode: code,
-      otpExpires: exp
+      otpExpires: exp,
+      hasSignedUp: false // Driver added by broker hasn't signed up yet
     });
 
     // Create broker-driver relationship in junction table
@@ -264,7 +265,7 @@ exports.listDrivers = async (req, res, next) => {
         model: User,
         as: 'Driver',
         where: userWhere,
-        attributes: ['id','name','phone','role','isPhoneVerified','brokerId','createdAt']
+        attributes: ['id','name','phone','email','role','isApproved','isEmailVerified','isPhoneVerified','hasSignedUp','brokerId','createdAt']
       }],
       limit,
       offset,

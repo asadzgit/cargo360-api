@@ -140,7 +140,8 @@ exports.signup = async (req, res, next) => {
       isApproved,
       isEmailVerified: false,
       emailVerificationToken,
-      emailVerificationExpires
+      emailVerificationExpires,
+      hasSignedUp: role === 'driver' ? true : false // Set to true for drivers who sign up
     });
 
     // Send verification email
@@ -684,7 +685,8 @@ exports.phoneSignup = async (req, res, next) => {
       isEmailVerified: false,
       isPhoneVerified: false,
       otpCode: code,
-      otpExpires: exp
+      otpExpires: exp,
+      hasSignedUp: role === 'driver' ? true : false // Set to true for drivers who sign up via phone
     });
 
     await sendOtpSms(phone, code);
