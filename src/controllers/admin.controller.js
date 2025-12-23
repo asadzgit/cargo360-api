@@ -5,7 +5,7 @@ const { notifyCustomerAboutShipment } = require('../helpers/notify');
 
 exports.listUsers = async (_req, res, next) => {
   try {
-    const users = await User.findAll({ attributes: ['id','name','company','email','phone','role','isApproved','createdAt'] });
+    const users = await User.findAll({ attributes: ['id','name','company','email','phone','role','isApproved','isEmailVerified','isPhoneVerified','hasSignedUp','createdAt'] });
     res.json({ users });
   } catch (e) { next(e); }
 };
