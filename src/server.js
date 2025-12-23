@@ -1,3 +1,21 @@
+// Add error handlers FIRST to catch any errors during module loading
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise);
+  console.error('Reason:', reason);
+  console.error('Stack:', reason?.stack);
+  // Keep process alive but log the error
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error);
+  console.error('Stack:', error.stack);
+  // Exit after a delay to allow logs to be written
+  setTimeout(() => {
+    console.error('Exiting due to uncaught exception...');
+    process.exit(1);
+  }, 1000);
+});
+
 const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
@@ -231,4 +249,33 @@ app.use((err, req, res, _next) => {
   });
 });
 
-app.listen(port, () => console.log(`API running on http://localhost:${port}`));
+// Start the server
+const server = app.listen(port, () => {
+  console.log(`✅ API running on http://localhost:${port}`);
+});
+
+// Handle server errors - MUST be set up BEFORE listen() callback
+server.on('error', (error) => {
+  if (error.syscall !== 'listen') {
+    console.error('❌ Server error:', error);
+    process.exit(1);
+    return;
+  }
+  
+  switch (error.code) {
+    case 'EACCES':
+      console.error(`❌ Port ${port} requires elevated privileges`);
+      process.exit(1);
+      break;
+    case 'EADDRINUSE':
+      console.error(`❌ Port ${port} is already in use`);
+      console.error(`💡 Solution: Kill the process using port ${port} or use a different port`);
+      console.error(`   Windows: netstat -ano | findstr :${port}`);
+      console.error(`   Then: taskkill /PID <PID> /F`);
+      process.exit(1);
+      break;
+    default:
+      console.error('❌ Server error:', error);
+      process.exit(1);
+  }
+});
