@@ -139,6 +139,11 @@ module.exports = (sequelize, DataTypes) => {
     clearingAgentNum: {
       type: DataTypes.STRING,
       allowNull: true
+    },
+    companyName: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      comment: 'Company name for the shipment booking'
     }
   }, {
     sequelize,
