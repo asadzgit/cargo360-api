@@ -4,7 +4,7 @@ const cors = require('cors');
 // const morgan = require('morgan'); // Replaced by custom request/response logger below
 const rateLimit = require('express-rate-limit');
 
-const { port, corsOrigin } = require('../config/env');
+const { port, corsOrigin, db } = require('../config/env');
 const authRoutes = require('./routes/auth.routes');
 const vehiclesRoutes = require('./routes/vehicles.routes');
 const shipmentsRoutes = require('./routes/shipments.routes');
@@ -231,4 +231,16 @@ app.use((err, req, res, _next) => {
   });
 });
 
-app.listen(port, () => console.log(`API running on http://localhost:${port}`));
+app.listen(port, async () => {
+  console.log(`API running on http://localhost:${port}`);
+  
+  // Test and log database connection
+  try {
+    const { sequelize } = require('../models');
+    await sequelize.authenticate();
+    const dbInfo = `postgresql://${db.user}@${db.host}:${db.port}/${db.name}`;
+    console.log(`Database connected: ${dbInfo}`);
+  } catch (error) {
+    console.error(`Database connection failed: ${error.message}`);
+  }
+});
