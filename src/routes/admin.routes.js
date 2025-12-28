@@ -4,6 +4,7 @@ const requireRole = require('../middlewares/roles');
 const adminOnly = require('../middlewares/adminOnly');
 const ctrl = require('../controllers/admin.controller');
 const assignmentCtrl = require('../controllers/assignment.controller');
+const mobileConfigCtrl = require('../controllers/mobileConfig.controller');
 
 // Routes accessible by both admin and moderator
 router.get('/users', auth, requireRole('admin'), ctrl.listUsers);
@@ -13,5 +14,10 @@ router.get('/shipments', auth, requireRole('admin'), ctrl.listShipments);
 router.patch('/users/:id/approve', auth, adminOnly, ctrl.approveTrucker);
 router.patch('/shipments/:id/assign', auth, adminOnly, assignmentCtrl.assign);
 router.put('/shipments/:id', auth, adminOnly, ctrl.updateShipment);
+
+// Mobile app configuration routes (admin only)
+router.get('/mobile-config', auth, adminOnly, mobileConfigCtrl.getMobileConfigs);
+router.get('/mobile-config/:platform', auth, adminOnly, mobileConfigCtrl.getMobileConfig);
+router.put('/mobile-config/:platform', auth, adminOnly, mobileConfigCtrl.updateMobileConfig);
 
 module.exports = router;

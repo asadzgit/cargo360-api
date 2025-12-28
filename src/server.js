@@ -17,6 +17,7 @@ const devicesRoutes = require('./routes/devices.routes');
 const notificationsRoutes = require('./routes/notifications.routes');
 const clearanceRequestsRoutes = require('./routes/clearanceRequests.routes');
 const documentsRoutes = require('./routes/documents.routes');
+const mobileRoutes = require('./routes/mobile.routes');
 const cookieParser = require('cookie-parser');
 
 const app = express();
@@ -163,6 +164,7 @@ app.use('/devices', devicesRoutes);
 app.use('/notifications', notificationsRoutes);
 app.use('/clearance-requests', clearanceRequestsRoutes);
 app.use('/documents', documentsRoutes);
+app.use('/mobile', mobileRoutes);
 
 // Health check endpoints
 app.get('/', (req, res) => {
