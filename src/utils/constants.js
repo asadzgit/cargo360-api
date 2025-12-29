@@ -4,8 +4,7 @@
 exports.SHIPMENT_NOTIFICATION_EMAILS = [
   'info@cargo360pk.com',
   'muhammad.asad@cargo360pk.com',
-  'saba@cargo360pk.com',
-  'furqan@cargo360pk.com'
+  'saba@cargo360pk.com'
 ];
 
 // Other constants can be added here as needed
