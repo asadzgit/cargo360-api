@@ -49,7 +49,8 @@ exports.updateMe = async (req, res, next) => {
 
     // Send push notification about profile update (non-blocking)
     try {
-      await sendUserNotification(
+      console.log('[PROFILE] Attempting to send notification for user:', user.id);
+      const notificationResult = await sendUserNotification(
         user.id,
         "Profile Updated",
         "Your profile has been updated successfully.",
@@ -58,8 +59,13 @@ exports.updateMe = async (req, res, next) => {
           userId: user.id
         }
       );
+      console.log('[PROFILE] Notification sent successfully:', notificationResult);
     } catch (notificationError) {
-      console.error('Failed to send profile update notification:', notificationError);
+      console.error('[PROFILE] Failed to send profile update notification:', {
+        userId: user.id,
+        error: notificationError.message,
+        stack: notificationError.stack
+      });
       // Don't fail the request if notification fails
     }
 

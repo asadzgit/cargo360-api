@@ -2,23 +2,53 @@ const { sendPushNotification } = require('../utils/pushNotifications');
 const { DeviceToken, Notification } = require('../../models');
 
 async function sendUserNotification(userId, title, body, data = {}) {
-  const tokens = await DeviceToken.findAll({
-    where: { userId: userId },
-    attributes: ['expoPushToken'],
-  });
-
-  const list = tokens.map(t => t.expoPushToken);
-
-  if (list.length > 0) {
-    await sendPushNotification(list, title, body, data);
-  }
-
-  await Notification.create({
-    userId: userId,
+  console.log('[NOTIFY] Sending notification to user:', {
+    userId,
     title,
     body,
-    data,
+    dataType: data.type || 'unknown'
   });
+
+  try {
+    const tokens = await DeviceToken.findAll({
+      where: { userId: userId },
+      attributes: ['expoPushToken', 'id'],
+    });
+
+    console.log('[NOTIFY] Found device tokens:', tokens.length, 'for user', userId);
+
+    const list = tokens.map(t => t.expoPushToken);
+
+    let pushResult = { sent: 0, failed: 0, errors: [] };
+    if (list.length > 0) {
+      pushResult = await sendPushNotification(list, title, body, data);
+      console.log('[NOTIFY] Push notification result:', pushResult);
+    } else {
+      console.warn('[NOTIFY] No device tokens found for user', userId);
+    }
+
+    // Always save notification to database (even if push fails)
+    const notification = await Notification.create({
+      userId: userId,
+      title,
+      body,
+      data,
+    });
+
+    console.log('[NOTIFY] Notification saved to database:', notification.id);
+
+    return {
+      notificationId: notification.id,
+      pushResult
+    };
+  } catch (error) {
+    console.error('[NOTIFY] Error sending notification:', {
+      userId,
+      error: error.message,
+      stack: error.stack
+    });
+    throw error;
+  }
 }
 
 /**
