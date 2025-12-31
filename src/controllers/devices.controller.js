@@ -122,11 +122,15 @@ exports.listMyTokens = async (req, res, next) => {
   try {
     const userId = req.user.id;
     
+    console.log('[DEVICE] Listing tokens for user:', userId);
+    
     const tokens = await DeviceToken.findAll({
       where: { userId: userId },
       attributes: ['id', 'expoPushToken', 'createdAt', 'updatedAt'],
       order: [['createdAt', 'DESC']]
     });
+
+    console.log('[DEVICE] Found tokens:', tokens.length);
 
     res.json({
       success: true,
@@ -138,7 +142,10 @@ exports.listMyTokens = async (req, res, next) => {
           fullToken: t.expoPushToken, // Include full token for debugging
           createdAt: t.createdAt,
           updatedAt: t.updatedAt
-        }))
+        })),
+        message: tokens.length === 0 
+          ? 'No device tokens registered. Please register a token from your mobile app using POST /devices/register'
+          : `${tokens.length} device token(s) registered`
       }
     });
   } catch (e) {

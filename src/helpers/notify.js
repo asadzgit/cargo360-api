@@ -1,4 +1,5 @@
 const { sendPushNotification } = require('../utils/pushNotifications');
+const { sendSocketNotification } = require('../utils/socketNotifications');
 const { DeviceToken, Notification } = require('../../models');
 
 async function sendUserNotification(userId, title, body, data = {}) {
@@ -19,6 +20,7 @@ async function sendUserNotification(userId, title, body, data = {}) {
 
     const list = tokens.map(t => t.expoPushToken);
 
+    // Send push notification (if device tokens exist)
     let pushResult = { sent: 0, failed: 0, errors: [] };
     if (list.length > 0) {
       pushResult = await sendPushNotification(list, title, body, data);
@@ -27,7 +29,11 @@ async function sendUserNotification(userId, title, body, data = {}) {
       console.warn('[NOTIFY] No device tokens found for user', userId);
     }
 
-    // Always save notification to database (even if push fails)
+    // Send socket notification (real-time)
+    const socketSent = sendSocketNotification(userId, title, body, data);
+    console.log('[NOTIFY] Socket notification sent:', socketSent);
+
+    // Always save notification to database (even if push/socket fails)
     const notification = await Notification.create({
       userId: userId,
       title,
@@ -39,7 +45,8 @@ async function sendUserNotification(userId, title, body, data = {}) {
 
     return {
       notificationId: notification.id,
-      pushResult
+      pushResult,
+      socketSent
     };
   } catch (error) {
     console.error('[NOTIFY] Error sending notification:', {
