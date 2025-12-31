@@ -1,7 +1,11 @@
 const { User, Shipment, Vehicle } = require('../../models/index');
 const { updateShipmentSchema } = require('../validation/shipments.schema');
 const { formatShipmentDates } = require('../utils/dateFormatter');
-const { notifyCustomerAboutShipment } = require('../helpers/notify');
+const { 
+  notifyCustomerAboutShipment,
+  notifyTruckerAboutShipment,
+  notifyDriverAboutShipment
+} = require('../helpers/notify');
 
 exports.listUsers = async (_req, res, next) => {
   try {
@@ -78,7 +82,7 @@ exports.updateShipment = async (req, res, next) => {
       ]
     });
     
-    // Notify customer about admin update (only if something actually changed)
+    // Notify all parties about admin update (only if something actually changed)
     if (Object.keys(changes).length > 0) {
       try {
         await notifyCustomerAboutShipment(updated, { 
@@ -86,7 +90,23 @@ exports.updateShipment = async (req, res, next) => {
           changes 
         });
       } catch (notificationError) {
-        console.error('Failed to send admin update notification:', notificationError);
+        console.error('Failed to send customer admin update notification:', notificationError);
+      }
+      
+      try {
+        await notifyTruckerAboutShipment(updated, { 
+          updateType: 'admin_update'
+        });
+      } catch (notificationError) {
+        console.error('Failed to send trucker admin update notification:', notificationError);
+      }
+      
+      try {
+        await notifyDriverAboutShipment(updated, { 
+          updateType: 'broker_update'
+        });
+      } catch (notificationError) {
+        console.error('Failed to send driver admin update notification:', notificationError);
       }
     }
     
