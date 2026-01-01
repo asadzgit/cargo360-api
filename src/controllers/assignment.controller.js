@@ -1,7 +1,11 @@
 const { Shipment, User } = require('../../models/index');
 const { assignmentSchema, assignDriverByBrokerSchema } = require('../validation/shipments.schema');
 const { formatShipmentDates } = require('../utils/dateFormatter');
-const { notifyCustomerAboutShipment } = require('../helpers/notify');
+const { 
+  notifyCustomerAboutShipment,
+  notifyTruckerAboutShipment,
+  notifyDriverAboutShipment
+} = require('../helpers/notify');
 
 // ASSIGN - PATCH /shipments/:id/assign (Admin assigns trucker or driver)
 exports.assign = async (req, res, next) => {
@@ -61,12 +65,16 @@ exports.assign = async (req, res, next) => {
       ]
     });
     
-    // Notify customer about assignment
+    // Notify all parties about assignment
     try {
       if (data.assignment === 'trucker') {
         await notifyCustomerAboutShipment(updatedShipment, { updateType: 'trucker_assigned' });
+        await notifyTruckerAboutShipment(updatedShipment, { updateType: 'assigned' });
       } else if (data.assignment === 'driver') {
         await notifyCustomerAboutShipment(updatedShipment, { updateType: 'driver_assigned' });
+        await notifyDriverAboutShipment(updatedShipment, { updateType: 'assigned' });
+        // Also notify trucker that driver was assigned
+        await notifyTruckerAboutShipment(updatedShipment, { updateType: 'driver_assigned' });
       }
     } catch (notificationError) {
       console.error('Failed to send assignment notification:', notificationError);
@@ -122,9 +130,11 @@ exports.assignDriverByBroker = async (req, res, next) => {
       ]
     });
 
-    // Notify customer that broker assigned a driver
+    // Notify all parties that broker assigned a driver
     try {
       await notifyCustomerAboutShipment(updatedShipment, { updateType: 'broker_driver_assigned' });
+      await notifyDriverAboutShipment(updatedShipment, { updateType: 'assigned' });
+      await notifyTruckerAboutShipment(updatedShipment, { updateType: 'driver_assigned' });
     } catch (notificationError) {
       console.error('Failed to send broker driver assignment notification:', notificationError);
     }

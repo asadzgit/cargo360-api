@@ -231,8 +231,21 @@ app.use((err, req, res, _next) => {
   });
 });
 
-app.listen(port, async () => {
+// Create HTTP server
+const http = require('http');
+const server = http.createServer(app);
+
+// Initialize Socket.IO
+const { initializeSocket } = require('./services/socketService');
+const { setupSocketHandlers } = require('./socket/socketHandler');
+
+initializeSocket(server);
+setupSocketHandlers();
+
+// Start server
+server.listen(port, async () => {
   console.log(`API running on http://localhost:${port}`);
+  console.log(`Socket.IO server running on http://localhost:${port}`);
   
   // Test and log database connection
   try {

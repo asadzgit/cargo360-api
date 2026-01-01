@@ -10,7 +10,11 @@ const {
 const { sendShipmentNotification, sendShipmentConfirmationNotification } = require('../utils/emailService');
 const { Op } = require('sequelize');
 const { formatShipmentDates } = require('../utils/dateFormatter');
-const { notifyCustomerAboutShipment } = require('../helpers/notify');
+const { 
+  notifyCustomerAboutShipment,
+  notifyTruckerAboutShipment,
+  notifyDriverAboutShipment
+} = require('../helpers/notify');
 
 // CREATE - POST /shipments
 exports.create = async (req, res, next) => {
@@ -135,6 +139,13 @@ exports.accept = async (req, res, next) => {
       console.error('Failed to send trucker acceptance notification:', notificationError);
     }
     
+    // Notify trucker about acceptance confirmation
+    try {
+      await notifyTruckerAboutShipment(updated, { updateType: 'assigned' });
+    } catch (notificationError) {
+      console.error('Failed to send trucker assignment notification:', notificationError);
+    }
+    
     res.json({ 
       success: true,
       message: 'Shipment accepted successfully',
@@ -168,12 +179,24 @@ exports.updateStatus = async (req, res, next) => {
       ]
     });
     
-    // Notify customer about status change (only if status actually changed)
+    // Notify all parties about status change (only if status actually changed)
     if (oldStatus !== status) {
       try {
         await notifyCustomerAboutShipment(updated, { updateType: 'status_change' });
       } catch (notificationError) {
-        console.error('Failed to send status change notification:', notificationError);
+        console.error('Failed to send customer status change notification:', notificationError);
+      }
+      
+      try {
+        await notifyTruckerAboutShipment(updated, { updateType: 'status_change' });
+      } catch (notificationError) {
+        console.error('Failed to send trucker status change notification:', notificationError);
+      }
+      
+      try {
+        await notifyDriverAboutShipment(updated, { updateType: 'status_change' });
+      } catch (notificationError) {
+        console.error('Failed to send driver status change notification:', notificationError);
       }
     }
     
@@ -271,11 +294,23 @@ exports.cancelByCustomer = async (req, res, next) => {
       include: [{ model: User, as: 'Customer', attributes: ['id', 'name', 'company', 'phone'] }]
     });
     
-    // Notify customer about cancellation
+    // Notify all parties about cancellation
     try {
       await notifyCustomerAboutShipment(updated, { updateType: 'cancelled' });
     } catch (notificationError) {
-      console.error('Failed to send cancellation notification:', notificationError);
+      console.error('Failed to send customer cancellation notification:', notificationError);
+    }
+    
+    try {
+      await notifyTruckerAboutShipment(updated, { updateType: 'cancelled' });
+    } catch (notificationError) {
+      console.error('Failed to send trucker cancellation notification:', notificationError);
+    }
+    
+    try {
+      await notifyDriverAboutShipment(updated, { updateType: 'cancelled' });
+    } catch (notificationError) {
+      console.error('Failed to send driver cancellation notification:', notificationError);
     }
     
     res.json({ 
@@ -315,7 +350,14 @@ exports.confirmByCustomer = async (req, res, next) => {
     try {
       await notifyCustomerAboutShipment(updated, { updateType: 'confirmed' });
     } catch (notificationError) {
-      console.error('Failed to send confirmation notification:', notificationError);
+      console.error('Failed to send customer confirmation notification:', notificationError);
+    }
+    
+    // Notify trucker if already assigned
+    try {
+      await notifyTruckerAboutShipment(updated, { updateType: 'status_change' });
+    } catch (notificationError) {
+      console.error('Failed to send trucker confirmation notification:', notificationError);
     }
     
     res.json({ 
@@ -423,6 +465,19 @@ exports.update = async (req, res, next) => {
       console.error('Failed to send customer update notification:', notificationError);
     }
     
+    // Notify trucker and driver about customer's update
+    try {
+      await notifyTruckerAboutShipment(updated, { updateType: 'customer_update' });
+    } catch (notificationError) {
+      console.error('Failed to send trucker update notification:', notificationError);
+    }
+    
+    try {
+      await notifyDriverAboutShipment(updated, { updateType: 'customer_update' });
+    } catch (notificationError) {
+      console.error('Failed to send driver update notification:', notificationError);
+    }
+    
     res.json({ 
       success: true,
       message: 'Shipment updated successfully',
@@ -453,11 +508,23 @@ exports.delete = async (req, res, next) => {
     include: [{ model: User, as: 'Customer', attributes: ['id', 'name', 'company', 'phone'] }]
   });
   
-  // Notify customer about admin cancellation
+  // Notify all parties about admin cancellation
   try {
     await notifyCustomerAboutShipment(updatedShipment, { updateType: 'admin_cancelled' });
   } catch (notificationError) {
-    console.error('Failed to send admin cancellation notification:', notificationError);
+    console.error('Failed to send customer admin cancellation notification:', notificationError);
+  }
+  
+  try {
+    await notifyTruckerAboutShipment(updatedShipment, { updateType: 'cancelled' });
+  } catch (notificationError) {
+    console.error('Failed to send trucker admin cancellation notification:', notificationError);
+  }
+  
+  try {
+    await notifyDriverAboutShipment(updatedShipment, { updateType: 'cancelled' });
+  } catch (notificationError) {
+    console.error('Failed to send driver admin cancellation notification:', notificationError);
   }
     
     res.json({ 

@@ -1,24 +1,61 @@
 const { sendPushNotification } = require('../utils/pushNotifications');
+const { sendSocketNotification } = require('../utils/socketNotifications');
 const { DeviceToken, Notification } = require('../../models');
 
 async function sendUserNotification(userId, title, body, data = {}) {
-  const tokens = await DeviceToken.findAll({
-    where: { userId: userId },
-    attributes: ['expoPushToken'],
-  });
-
-  const list = tokens.map(t => t.expoPushToken);
-
-  if (list.length > 0) {
-    await sendPushNotification(list, title, body, data);
-  }
-
-  await Notification.create({
-    userId: userId,
+  console.log('[NOTIFY] Sending notification to user:', {
+    userId,
     title,
     body,
-    data,
+    dataType: data.type || 'unknown'
   });
+
+  try {
+    const tokens = await DeviceToken.findAll({
+      where: { userId: userId },
+      attributes: ['expoPushToken', 'id'],
+    });
+
+    console.log('[NOTIFY] Found device tokens:', tokens.length, 'for user', userId);
+
+    const list = tokens.map(t => t.expoPushToken);
+
+    // Send push notification (if device tokens exist)
+    let pushResult = { sent: 0, failed: 0, errors: [] };
+    if (list.length > 0) {
+      pushResult = await sendPushNotification(list, title, body, data);
+      console.log('[NOTIFY] Push notification result:', pushResult);
+    } else {
+      console.warn('[NOTIFY] No device tokens found for user', userId);
+    }
+
+    // Send socket notification (real-time)
+    const socketSent = sendSocketNotification(userId, title, body, data);
+    console.log('[NOTIFY] Socket notification sent:', socketSent);
+
+    // Always save notification to database (even if push/socket fails)
+    const notification = await Notification.create({
+      userId: userId,
+      title,
+      body,
+      data,
+    });
+
+    console.log('[NOTIFY] Notification saved to database:', notification.id);
+
+    return {
+      notificationId: notification.id,
+      pushResult,
+      socketSent
+    };
+  } catch (error) {
+    console.error('[NOTIFY] Error sending notification:', {
+      userId,
+      error: error.message,
+      stack: error.stack
+    });
+    throw error;
+  }
 }
 
 /**
@@ -189,5 +226,160 @@ async function notifyCustomerAboutShipment(shipment, options = {}) {
   }
 }
 
-module.exports = { sendUserNotification, notifyCustomerAboutShipment };
+/**
+ * Notify trucker/broker about shipment updates
+ * @param {Object} shipment - The shipment object with associations
+ * @param {Object} options - Options object
+ * @param {string} options.updateType - Type of update
+ * @param {Object} options.updatedBy - User who made the update
+ */
+async function notifyTruckerAboutShipment(shipment, options = {}) {
+  if (!shipment || !shipment.truckerId) return;
+
+  const { updateType, updatedBy } = options;
+  const truckerId = shipment.truckerId;
+  
+  let title = 'Shipment Update';
+  let body = '';
+  const data = {
+    type: 'shipment_update',
+    shipmentId: shipment.id,
+    updateType
+  };
+
+  const customerName = shipment.Customer?.name || shipment.Customer?.company || 'Customer';
+
+  switch (updateType) {
+    case 'assigned':
+      title = 'New Shipment Assigned';
+      body = `You have been assigned to a new shipment from ${customerName}.`;
+      break;
+
+    case 'customer_update':
+      title = 'Shipment Updated by Customer';
+      body = `${customerName} has updated the shipment details.`;
+      break;
+
+    case 'status_change':
+      title = 'Shipment Status Updated';
+      const statusMessages = {
+        'confirmed': 'Customer has confirmed the shipment.',
+        'picked_up': 'Shipment has been picked up.',
+        'in_transit': 'Shipment is now in transit.',
+        'delivered': 'Shipment has been delivered.',
+        'cancelled': 'Shipment has been cancelled.'
+      };
+      body = statusMessages[shipment.status] || `Shipment status updated to ${shipment.status}.`;
+      data.status = shipment.status;
+      break;
+
+    case 'driver_assigned':
+      title = 'Driver Assigned';
+      const driverName = shipment.Driver?.name || 'a driver';
+      body = `You have assigned ${driverName} to this shipment.`;
+      data.driverId = shipment.driverId;
+      data.driverName = driverName;
+      break;
+
+    case 'cancelled':
+      title = 'Shipment Cancelled';
+      body = `Shipment has been cancelled${shipment.cancelReason ? `. Reason: ${shipment.cancelReason}` : '.'}`;
+      break;
+
+    case 'admin_update':
+      title = 'Admin Updated Shipment';
+      body = 'Admin has updated shipment details.';
+      break;
+
+    default:
+      title = 'Shipment Updated';
+      body = 'Your assigned shipment has been updated.';
+  }
+
+  try {
+    await sendUserNotification(truckerId, title, body, data);
+  } catch (error) {
+    console.error('Failed to send trucker notification:', error);
+  }
+}
+
+/**
+ * Notify driver about shipment updates
+ * @param {Object} shipment - The shipment object with associations
+ * @param {Object} options - Options object
+ * @param {string} options.updateType - Type of update
+ */
+async function notifyDriverAboutShipment(shipment, options = {}) {
+  if (!shipment || !shipment.driverId) return;
+
+  const { updateType } = options;
+  const driverId = shipment.driverId;
+  
+  let title = 'Shipment Update';
+  let body = '';
+  const data = {
+    type: 'shipment_update',
+    shipmentId: shipment.id,
+    updateType
+  };
+
+  const customerName = shipment.Customer?.name || shipment.Customer?.company || 'Customer';
+  const brokerName = shipment.Trucker?.name || shipment.Trucker?.company || 'Your broker';
+
+  switch (updateType) {
+    case 'assigned':
+      title = 'New Assignment';
+      body = `${brokerName} has assigned you to a new shipment from ${customerName}.`;
+      data.truckerId = shipment.truckerId;
+      data.truckerName = brokerName;
+      break;
+
+    case 'status_change':
+      title = 'Shipment Status Updated';
+      const statusMessages = {
+        'confirmed': 'Customer has confirmed the shipment.',
+        'picked_up': 'Shipment has been picked up.',
+        'in_transit': 'Shipment is now in transit.',
+        'delivered': 'Shipment has been delivered successfully.',
+        'cancelled': 'Shipment has been cancelled.'
+      };
+      body = statusMessages[shipment.status] || `Shipment status updated to ${shipment.status}.`;
+      data.status = shipment.status;
+      break;
+
+    case 'customer_update':
+      title = 'Shipment Updated by Customer';
+      body = `${customerName} has updated the shipment details.`;
+      break;
+
+    case 'broker_update':
+      title = 'Shipment Updated by Broker';
+      body = `${brokerName} has updated the shipment details.`;
+      data.truckerId = shipment.truckerId;
+      data.truckerName = brokerName;
+      break;
+
+    case 'cancelled':
+      title = 'Shipment Cancelled';
+      body = `Shipment has been cancelled${shipment.cancelReason ? `. Reason: ${shipment.cancelReason}` : '.'}`;
+      break;
+
+    default:
+      title = 'Shipment Updated';
+      body = 'Your assigned shipment has been updated.';
+  }
+
+  try {
+    await sendUserNotification(driverId, title, body, data);
+  } catch (error) {
+    console.error('Failed to send driver notification:', error);
+  }
+}
+
+module.exports = { 
+  sendUserNotification, 
+  notifyCustomerAboutShipment,
+  notifyTruckerAboutShipment,
+  notifyDriverAboutShipment
+};
 
