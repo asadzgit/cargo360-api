@@ -7,7 +7,8 @@ const { signupSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema, ph
 
 const { jwt: jwtCfg } = require('../../config/env');
 const { User, sequelize } = require('../../models/index');
-const { generateToken, sendVerificationEmail, sendPasswordResetEmail } = require('../utils/emailService');
+const { generateToken, sendPasswordResetEmail, sendVerificationEmail } = require('../utils/emailService');
+const { addEmailConfirmationJob } = require('../bullmq/email.queue');
 const { ERROR_CODES, createError, handleJoiError, handleSequelizeError } = require('../utils/errorHandler');
 
 function normalizeToGateway(pkPhone) {
@@ -144,14 +145,21 @@ exports.signup = async (req, res, next) => {
       hasSignedUp: role === 'driver' ? true : false // Set to true for drivers who sign up
     });
 
-    // Send verification email
+    // Add email confirmation job to BullMQ queue (non-blocking)
     try {
-      await sendVerificationEmail(user, emailVerificationToken);
-    } catch (emailError) {
-      console.error('Failed to send verification email:', emailError);
-      // Don't fail the signup if email fails, but log it
+      await addEmailConfirmationJob({
+        email: user.email,
+        token: emailVerificationToken,
+        name: user.name,
+      });
+      console.log(`[Signup] Email confirmation job added to queue for user: ${user.email}`);
+    } catch (queueError) {
+      console.error('[Signup] Failed to add email confirmation job to queue:', queueError);
+      // Don't fail the signup if queue fails, but log it
+      // The email can be resent later via resend verification endpoint
     }
 
+    // Respond immediately without waiting for email to send
     // Don't return tokens until email is verified
     res.status(201).json({ 
       message: 'Account created successfully. Please check your email to verify your account.',
@@ -249,14 +257,17 @@ exports.refresh = async (req, res, next) => {
 };
 
 // Email verification endpoint
+// GET /api/auth/verify-email?token=TOKEN
 exports.verifyEmail = async (req, res, next) => {
   try {
     const { token } = req.query;
+    
+    // Validate token
     if (!token) {
-      const clientUrl = process.env.CLIENT_URL || 'http://localhost:4000';
-      return res.redirect(302, `${clientUrl}/verification-failure`);
+      return next(createError('Verification token is required', ERROR_CODES.MISSING_FIELD, 400));
     }
 
+    // Find user with valid token
     const user = await User.findOne({
       where: {
         emailVerificationToken: token,
@@ -265,30 +276,34 @@ exports.verifyEmail = async (req, res, next) => {
     });
 
     if (!user) {
-      const clientUrl = process.env.CLIENT_URL || 'http://localhost:4000';
-      return res.redirect(302, `${clientUrl}/verification-failure`);
+      return next(createError('Invalid or expired verification token', ERROR_CODES.INVALID_TOKEN, 400));
     }
 
-    // Update user as verified
+    // Update user as verified and remove verification token
     await user.update({
       isEmailVerified: true,
       emailVerificationToken: null,
       emailVerificationExpires: null
     });
 
-    // Redirect to client success page instead of returning JSON
-    const clientUrl = process.env.CLIENT_URL || 'http://localhost:4000';
-    return res.redirect(302, `${clientUrl}/verification-success`);
-  } catch (e) { 
-      try {
-        const clientUrl = process.env.CLIENT_URL || 'http://localhost:4000';
-        return res.redirect(302, `${clientUrl}/verification-failure`);
-      } catch (_) {
-        // Fallback to default error handling if redirect fails
-        if (e.isJoi) return next(handleJoiError(e));
-        if (e.name && e.name.startsWith('Sequelize')) return next(handleSequelizeError(e));
-        next(e);
+    // Return success response
+    res.json({
+      success: true,
+      message: 'Email verified successfully',
+      user: {
+        id: user.id,
+        email: user.email,
+        isEmailVerified: true
       }
+    });
+  } catch (e) {
+    if (e.isJoi) {
+      return next(handleJoiError(e));
+    }
+    if (e.name && e.name.startsWith('Sequelize')) {
+      return next(handleSequelizeError(e));
+    }
+    next(e);
   }
 };
 
