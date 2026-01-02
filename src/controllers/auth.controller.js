@@ -452,7 +452,7 @@ exports.getDeletionLink = async (req, res, next) => {
     const jti = (crypto.randomUUID?.() || crypto.randomBytes(16).toString('hex'));
     const ttlSec = 10 * 60; // 10 minutes
     const token = jwt.sign({ sub: String(userId), scope: 'delete_account', jti }, jwtCfg.accessSecret, { expiresIn: ttlSec });
-    const frontendBase = process.env.CLIENT_DELETE_BASE_URL || 'https://cargo360pk.com/delete-mobile-account';
+    const frontendBase = process.env.CLIENT_DELETE_BASE_URL || 'https://app.cargo360pk.com/delete-mobile-account';
     const url = `${frontendBase}#token=${token}`;
     res.json({ token, url, expiresIn: ttlSec });
   } catch (e) { next(e); }

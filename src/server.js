@@ -36,8 +36,8 @@ const corsOptions = {
       return callback(null, true);
     }
     
-    // Allow any domain containing admin.cargo360pk.com or cargo360pk.com
-    if (origin.includes('admin.cargo360pk.com') || origin.includes('cargo360pk.com')) {
+    // Allow any domain containing admin.cargo360pk.com, app.cargo360pk.com, or cargo360pk.com
+    if (origin.includes('admin.cargo360pk.com') || origin.includes('app.cargo360pk.com') || origin.includes('cargo360pk.com')) {
       return callback(null, true);
     }
     
