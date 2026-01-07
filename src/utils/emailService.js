@@ -239,7 +239,6 @@ Cargo Details:
 
 Financial Details:
 - Budget: ${shipment.budget ? 'PKR ' + shipment.budget : 'N/A'}
-- Insurance: ${shipment.insurance ? 'Yes' : 'No'}
 - Sales Tax: ${shipment.salesTax ? 'Yes' : 'No'}
 
 Created At: ${new Date(shipment.createdAt).toLocaleString('en-PK', { timeZone: 'Asia/Karachi' })}
@@ -389,10 +388,6 @@ Cargo360 Admin Panel: ${process.env.ADMIN_URL || 'https://admin.cargo360pk.com'}
                       </tr>
                       ` : ''}
                       <tr>
-                        <td style="padding: 8px 0; color: #555; font-weight: bold;">Insurance:</td>
-                        <td style="padding: 8px 0; color: #333;">${shipment.insurance ? '✅ Yes' : '❌ No'}</td>
-                      </tr>
-                      <tr>
                         <td style="padding: 8px 0; color: #555; font-weight: bold;">Sales Tax:</td>
                         <td style="padding: 8px 0; color: #333;">${shipment.salesTax ? '✅ Yes' : '❌ No'}</td>
                       </tr>
@@ -501,7 +496,6 @@ Cargo Details:
 
 Financial Details:
 - Budget: ${shipment.budget ? 'PKR ' + shipment.budget : 'N/A'}
-- Insurance: ${shipment.insurance ? 'Yes' : 'No'}
 - Sales Tax: ${shipment.salesTax ? 'Yes' : 'No'}
 
 Confirmed At: ${new Date().toLocaleString('en-PK', { timeZone: 'Asia/Karachi' })}
@@ -659,10 +653,6 @@ Cargo360 Admin Panel: ${process.env.ADMIN_URL || 'https://admin.cargo360pk.com'}
                         <td style="padding: 12px 15px; color: #28a745; font-weight: bold; font-size: 22px;">PKR ${Number(shipment.budget).toLocaleString('en-PK')}</td>
                       </tr>
                       ` : ''}
-                      <tr>
-                        <td style="padding: 8px 15px; color: #555; font-weight: bold;">Insurance:</td>
-                        <td style="padding: 8px 15px; color: #333;">${shipment.insurance ? '✅ Yes' : '❌ No'}</td>
-                      </tr>
                       <tr>
                         <td style="padding: 8px 15px; color: #555; font-weight: bold;">Sales Tax:</td>
                         <td style="padding: 8px 15px; color: #333;">${shipment.salesTax ? '✅ Yes' : '❌ No'}</td>
