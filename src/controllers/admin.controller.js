@@ -25,8 +25,20 @@ exports.approveTrucker = async (req, res, next) => {
 
 exports.listShipments = async (_req, res, next) => {
   try {
-    const shipments = await Shipment.findAll({ order: [['createdAt','DESC']] });
-    res.json({ shipments: shipments.map(s => formatShipmentDates(s)) });
+    const shipments = await Shipment.findAll({ 
+      order: [['createdAt','DESC']]
+      // No attributes filter - get all fields including platform
+    });
+    // Format each shipment and ensure platform is always included
+    const formattedShipments = shipments.map(s => {
+      const formatted = formatShipmentDates(s);
+      // Explicitly get platform from Sequelize instance using getDataValue
+      // This ensures we get the actual database value even if null
+      const platformValue = s.getDataValue ? s.getDataValue('platform') : s.platform;
+      formatted.platform = platformValue !== undefined ? platformValue : null;
+      return formatted;
+    });
+    res.json({ shipments: formattedShipments });
   } catch (e) { next(e); }
 };
 
