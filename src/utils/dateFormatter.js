@@ -45,6 +45,11 @@ const formatShipmentDates = (shipment) => {
     shipmentData.deliveryDate = formatDateToDDMMYYYY(shipmentData.deliveryDate);
   }
   
+  // Ensure platform field is always present (even if null for old shipments)
+  // Frontend can display "N/A" or handle null as needed
+  // Explicitly set platform to ensure it's always in the response
+  shipmentData.platform = shipmentData.platform !== undefined ? shipmentData.platform : null;
+  
   return shipmentData;
 };
 

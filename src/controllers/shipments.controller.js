@@ -16,12 +16,55 @@ const {
   notifyDriverAboutShipment
 } = require('../helpers/notify');
 
+// Helper function to detect platform from request headers
+const detectPlatform = (req) => {
+  // If platform is explicitly provided in body, use it
+  if (req.body.platform === 'web' || req.body.platform === 'mobile') {
+    return req.body.platform;
+  }
+  
+  // Auto-detect from User-Agent header
+  const userAgent = req.headers['user-agent'] || '';
+  const origin = req.headers.origin || '';
+  const referer = req.headers.referer || '';
+  
+  // Check if it's a mobile app (common mobile app indicators)
+  const mobileAppIndicators = [
+    'cargo360-client-app',
+    'okhttp',  // Android HTTP client
+    'CFNetwork',  // iOS HTTP client
+    'Dart',  // Flutter apps
+    'ReactNative'
+  ];
+  
+  const isMobileApp = mobileAppIndicators.some(indicator => 
+    userAgent.toLowerCase().includes(indicator.toLowerCase())
+  );
+  
+  // Check origin/referer for web portal
+  const isWebPortal = origin.includes('cargo360-client-portal') || 
+                      referer.includes('cargo360-client-portal') ||
+                      origin.includes('localhost') && !isMobileApp;
+  
+  if (isMobileApp) return 'mobile';
+  if (isWebPortal) return 'web';
+  
+  // Default to 'web' if can't determine (most requests are from web)
+  return 'web';
+};
+
 // CREATE - POST /shipments
 exports.create = async (req, res, next) => {
   try {
     console.log("***********************");
     
     console.log("req.body", req.body);
+    
+    // Auto-detect platform if not provided
+    if (!req.body.platform) {
+      req.body.platform = detectPlatform(req);
+      console.log("Auto-detected platform:", req.body.platform);
+    }
     
     const data = await createShipmentSchema.validateAsync(req.body, { stripUnknown: true });
     

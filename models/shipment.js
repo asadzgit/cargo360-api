@@ -144,7 +144,12 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: true,
       comment: 'Company name for the shipment booking'
-    }
+    },
+    platform: {
+      type: DataTypes.ENUM('web', 'mobile'),
+      allowNull: true,
+      comment: 'Platform from which the booking form was submitted (web: cargo360-client-portal, mobile: cargo360-client-app)'
+    },
   }, {
     sequelize,
     modelName: 'Shipment',
