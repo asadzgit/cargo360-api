@@ -139,6 +139,11 @@ module.exports = (sequelize, DataTypes) => {
     clearingAgentNum: {
       type: DataTypes.STRING,
       allowNull: true
+    },
+    platform: {
+      type: DataTypes.ENUM('web', 'mobile'),
+      allowNull: true,
+      comment: 'Platform from which the booking form was submitted (web: cargo360-client-portal, mobile: cargo360-client-app)'
     }
   }, {
     sequelize,
