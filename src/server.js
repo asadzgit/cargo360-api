@@ -242,8 +242,8 @@ const { setupSocketHandlers } = require('./socket/socketHandler');
 initializeSocket(server);
 setupSocketHandlers();
 
-// Start server
-server.listen(port, async () => {
+// Start server - listen on all network interfaces (0.0.0.0) to allow connections from other devices
+server.listen(port, '0.0.0.0', async () => {
   console.log(`API running on http://localhost:${port}`);
   console.log(`Socket.IO server running on http://localhost:${port}`);
   
